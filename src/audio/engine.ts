@@ -144,6 +144,23 @@ export class CozyAudio {
     this.melody([88, 91], 0.06, 0.05, 'sine');
   }
 
+  clock(urgent: boolean) {
+    const ctx = this.sfxCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(urgent ? 1320 : 990, t);
+    o.frequency.exponentialRampToValueAtTime(urgent ? 990 : 740, t + 0.05);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(urgent ? 0.22 : 0.15, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.16);
+  }
+
   win() {
     this.melody([72, 76, 79, 84, 88], 0.11, 0.07);
   }

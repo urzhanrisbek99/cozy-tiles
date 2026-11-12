@@ -18,6 +18,18 @@ const io = new Server(http, { cors: { origin: true } });
 const rooms = new Map<string, Room>();
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
+const buildId = () => {
+  try {
+    return String(fs.statSync(path.join(dist, 'index.html')).mtimeMs);
+  } catch {
+    return 'dev';
+  }
+};
+
+app.get('/healthz', (_req, res) => {
+  res.send('ok');
+});
+
 if (fs.existsSync(dist)) {
   app.use(express.static(dist));
   app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
@@ -79,6 +91,8 @@ function enter(socket: Socket, room: Room, who: Identity) {
 }
 
 io.on('connection', (socket) => {
+  socket.emit('build', buildId());
+
   const ctx = () => {
     const room = socket.data.room as Room | undefined;
     const playerId = socket.data.playerId as string | undefined;

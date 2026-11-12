@@ -63,12 +63,19 @@ export default function App() {
       setView((v) => (v && v.phase === 'playing' && v.turnPlayerId !== v.you ? { ...v, draft } : v));
     socket.on('state', onState);
     socket.on('draft', onDraft);
+    let build: string | null = null;
+    const onBuild = (next: string) => {
+      if (build !== null && build !== next) window.location.reload();
+      build = next;
+    };
+    socket.on('build', onBuild);
     socket.on('connect', rejoin);
     socket.on('disconnect', onDisconnect);
     if (socket.connected) void rejoin();
     return () => {
       socket.off('state', onState);
       socket.off('draft', onDraft);
+      socket.off('build', onBuild);
       socket.off('connect', rejoin);
       socket.off('disconnect', onDisconnect);
     };
@@ -131,7 +138,7 @@ export default function App() {
     <>
       <Scene theme={prefs.theme} />
       <div className={`app ${inGame ? 'in-game' : ''}`}>
-        <Controls prefs={prefs} update={update} onRules={() => setRules(true)} onLeave={view ? leave : undefined} />
+        <Controls prefs={prefs} update={update} onRules={() => setRules(true)} onLeave={view ? leave : undefined} confirmLeave={view?.phase === 'playing'} />
         {!view && <Home prefs={prefs} update={update} onCreate={() => enterRoom('room:create')} onJoin={(c) => enterRoom('room:join', c)} />}
         {view?.phase === 'lobby' && <Lobby view={view} flash={flash} onLeave={leave} />}
         {inGame && <Game view={view} deadline={deadline} onLeave={leave} flash={flash} />}
@@ -152,11 +159,13 @@ function Controls({
   update,
   onRules,
   onLeave,
+  confirmLeave,
 }: {
   prefs: Prefs;
   update: (p: Partial<Prefs>) => void;
   onRules: () => void;
   onLeave?: () => void;
+  confirmLeave: boolean;
 }) {
   return (
     <nav className="controls" aria-label="Настройки">
@@ -204,13 +213,31 @@ function Controls({
         <button onClick={onRules} title="Правила">
           ?
         </button>
-        {onLeave && (
-          <button onClick={onLeave} title="Выйти из комнаты">
-            ⎋
-          </button>
-        )}
       </div>
+      {onLeave && <LeaveButton onLeave={onLeave} confirm={confirmLeave} />}
     </nav>
+  );
+}
+
+function LeaveButton({ onLeave, confirm }: { onLeave: () => void; confirm: boolean }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 3500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`leave ${armed ? 'armed' : ''}`}
+      onClick={() => (confirm && !armed ? setArmed(true) : onLeave())}
+      title="Выйти из игры"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden>
+        <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+        <path d="M15 8l4 4-4 4M19 12H9" />
+      </svg>
+      <span>{armed ? 'Точно выйти?' : 'Выйти'}</span>
+    </button>
   );
 }
 
@@ -403,6 +430,7 @@ function Rules({ onClose }: { onClose: () => void }) {
           <li>После первого выхода можно как угодно перекладывать всё на столе — главное, чтобы в конце хода все комбинации были правильными.</li>
           <li>Нечего выложить — возьми плитку из мешочка 👜.</li>
           <li>Котик-джокер заменяет любую плитку. Его можно забрать из комбинации, но он должен остаться на столе.</li>
+          <li>Если время вышло, а на столе всё собрано правильно — ход засчитывается сам. Если нет, плитки возвращаются в руку и берётся одна из мешочка.</li>
           <li>Если мешочек пуст и все пасуют — побеждает тот, у кого в руке меньше очков.</li>
         </ul>
         <p className="muted">Проигравшие теряют сумму плиток в руке (котик = 30), победитель забирает её себе.</p>

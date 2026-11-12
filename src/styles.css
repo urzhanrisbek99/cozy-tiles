@@ -583,7 +583,7 @@ h2 {
   position: fixed;
   top: 10px;
   left: 12px;
-  right: 440px;
+  right: 596px;
   z-index: 6;
   display: flex;
   gap: 8px;
@@ -1441,5 +1441,126 @@ h2 {
   }
   .room-code {
     font-size: 42px;
+  }
+}
+
+/* leave, countdown, flying tiles */
+
+.leave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 176px;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.leave svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.leave:hover {
+  background: #ffe3e6;
+  color: #c0394f;
+}
+
+.leave.armed {
+  background: #e25c73;
+  border-color: #e25c73;
+  color: #fff;
+}
+
+.fly-tile {
+  position: fixed;
+  z-index: 40;
+  width: 30px;
+  height: 39px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--tile-1), var(--tile-2));
+  box-shadow: 0 3px 0 var(--tile-edge), 0 8px 14px rgba(60, 30, 40, 0.3);
+  pointer-events: none;
+}
+
+.countdown {
+  position: fixed;
+  left: 50%;
+  top: 30%;
+  z-index: 29;
+  translate: -50% 0;
+  font-family: 'Comfortaa', 'Nunito', sans-serif;
+  font-size: 120px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e25c73;
+  -webkit-text-stroke: 3px #fff;
+  paint-order: stroke fill;
+  pointer-events: none;
+  opacity: 0;
+  animation: countdown 1s ease-out forwards;
+}
+
+.game.hurry .board,
+.game.hurry .status-line {
+  border-color: #e25c73;
+}
+
+.game.hurry .board {
+  animation: hurry 1s ease-in-out infinite;
+}
+
+.game.hurry .chip.turn {
+  border-color: #e25c73;
+  background: #ffe3e6;
+}
+
+.game.hurry .ring circle {
+  stroke: #e25c73;
+}
+
+@keyframes countdown {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  20% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes hurry {
+  50% {
+    box-shadow: var(--shadow), 0 0 0 7px rgba(226, 92, 115, 0.4);
+  }
+}
+
+@media (max-width: 900px) {
+  .leave {
+    min-width: 0;
+    padding: 0 12px;
+  }
+  .leave span {
+    display: none;
+  }
+  .countdown {
+    font-size: 84px;
   }
 }

@@ -160,6 +160,18 @@ export class Room {
     if (!player || player.id !== byId) throw new RoomError('Сейчас не твой ход');
     const after = sanitizeGrid(raw, this.tiles.length);
     if (!after) throw new RoomError('Странное поле — попробуй сбросить ход');
+    const error = this.commit(player, after, '');
+    if (error) throw new RoomError(error);
+  }
+
+  expire(player: Player) {
+    if (this.current !== player) return;
+    if (this.draft && this.commit(player, this.draft, ' (время вышло)') === null) return;
+    this.drawFor(player, true);
+    this.advance();
+  }
+
+  private commit(player: Player, after: Grid, note: string): string | null {
     const check = validateTurn({
       before: this.board,
       after,
@@ -167,19 +179,17 @@ export class Room {
       tiles: this.tiles,
       melded: player.melded,
     });
-    if (!check.ok) throw new RoomError(check.error);
+    if (!check.ok) return check.error;
     const played = new Set(check.played);
     player.rack = player.rack.filter((id) => !played.has(id));
     player.melded = true;
     this.board = after;
     this.draft = null;
     this.passStreak = 0;
-    this.last = `${player.name} выкладывает ${plural(played.size, 'плитку', 'плитки', 'плиток')}`;
-    if (player.rack.length === 0) {
-      this.finish(player, 'out');
-      return;
-    }
-    this.advance();
+    this.last = `${player.name} выкладывает ${plural(played.size, 'плитку', 'плитки', 'плиток')}${note}`;
+    if (player.rack.length === 0) this.finish(player, 'out');
+    else this.advance();
+    return null;
   }
 
   draw(byId: string) {
@@ -295,9 +305,7 @@ export class Room {
     if (!Number.isFinite(at)) return;
     const turnId = this.turnId;
     this.timer = setTimeout(() => {
-      if (this.turnId !== turnId || this.current !== player) return;
-      this.drawFor(player, true);
-      this.advance();
+      if (this.turnId === turnId) this.expire(player);
     }, Math.max(0, at - Date.now()));
   }
 

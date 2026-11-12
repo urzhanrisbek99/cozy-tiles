@@ -1,13 +1,12 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
-import { BOARD_COLS, BOARD_ROWS, COLORS, INITIAL_MELD, MAX_NUM, gridIds, setValue, type Grid, type Tile } from '../shared/rules';
+import { BOARD_COLS, BOARD_ROWS, INITIAL_MELD, gridIds, setValue, type Grid, type Tile } from '../shared/rules';
 import type { Reaction, RoomView } from '../shared/types';
 import { audio } from './audio/engine';
 import { CatFace, Mug, SleepyCat } from './Cats';
+import { RACK_COLS, arrange, continuesSet, dropOnBoard, fitRack, insertGroup, layoutRack, type Cells, type SortMode } from './layout';
 import { call, socket } from './net';
 import { TileView } from './TileView';
 
-const RACK_COLS = 16;
-const RACK_MIN = RACK_COLS * 2;
 const GAP = 3;
 const DRAG_SLOP = 6;
 const HOLD_FIRST_MS = 320;
@@ -15,8 +14,6 @@ const HOLD_NEXT_MS = 190;
 const REACTIONS = ['🐾', '❤️', '😹', '☕', '👏', '😴'];
 
 type Zone = 'board' | 'rack';
-type Cells = (number | null)[];
-type SortMode = 'run' | 'group';
 
 interface Loc {
   zone: Zone;
@@ -27,7 +24,10 @@ interface Loc {
 interface Point {
   x: number;
   y: number;
+  kind?: 'drop' | 'fly';
 }
+
+const EASE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
 
 interface Gesture {
   ids: number[];
@@ -46,120 +46,6 @@ interface Gesture {
 const cloneGrid = (g: Grid) => g.map((row) => row.slice());
 const isId = (v: number | null): v is number => v !== null;
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-function fitRack(cells: Cells, ids: number[]): Cells {
-  const want = new Set(ids);
-  const next = cells.map((v) => (v !== null && want.has(v) ? v : null));
-  const present = new Set(next);
-  const addRow = () => next.push(...Array<null>(RACK_COLS).fill(null));
-  while (next.length < RACK_MIN || next.length % RACK_COLS) next.push(null);
-  for (const id of ids) {
-    if (present.has(id)) continue;
-    if (!next.includes(null)) addRow();
-    next[next.indexOf(null)] = id;
-  }
-  while (next.length > RACK_MIN && next.slice(-RACK_COLS).every((v) => v === null)) next.length -= RACK_COLS;
-  if (!next.includes(null)) addRow();
-  return next;
-}
-
-function insertGroup(row: Cells, c: number, ids: number[]): boolean {
-  const k = ids.length;
-  if (row.filter((v) => v === null).length < k) return false;
-  const start = Math.max(0, Math.min(c, row.length - k));
-  if (row.slice(start, start + k).every((v) => v === null)) {
-    ids.forEach((id, i) => (row[start + i] = id));
-    return true;
-  }
-  let need = k;
-  const right: Cells = [];
-  for (let i = start; i < row.length; i++) {
-    if (row[i] === null && need > 0) need--;
-    else right.push(row[i]);
-  }
-  const left = row.slice(0, start);
-  for (let i = left.length - 1; i >= 0 && need > 0; i--) {
-    if (left[i] === null) {
-      left.splice(i, 1);
-      need--;
-    }
-  }
-  const next = [...left, ...ids, ...right];
-  for (let i = 0; i < row.length; i++) row[i] = next[i];
-  return true;
-}
-
-function arrange(ids: number[], tiles: Tile[], mode: SortMode) {
-  const pool = new Set(ids.filter((id) => !tiles[id].joker));
-  const take = (set: number[]) => set.forEach((id) => pool.delete(id));
-
-  const runs = () => {
-    const out: number[][] = [];
-    for (let color = 0; color < COLORS; color++) {
-      for (;;) {
-        const at = new Map<number, number>();
-        for (const id of pool) if (tiles[id].color === color && !at.has(tiles[id].num)) at.set(tiles[id].num, id);
-        let found = false;
-        for (let n = 1; n <= MAX_NUM; n++) {
-          if (!at.has(n)) continue;
-          let m = n;
-          while (at.has(m + 1)) m++;
-          if (m - n >= 2) {
-            const run: number[] = [];
-            for (let x = n; x <= m; x++) run.push(at.get(x)!);
-            take(run);
-            out.push(run);
-            found = true;
-          }
-          n = m;
-        }
-        if (!found) break;
-      }
-    }
-    return out;
-  };
-
-  const groups = () => {
-    const out: number[][] = [];
-    for (let n = 1; n <= MAX_NUM; n++) {
-      for (;;) {
-        const by = new Map<number, number>();
-        for (const id of pool) if (tiles[id].num === n && !by.has(tiles[id].color)) by.set(tiles[id].color, id);
-        if (by.size < 3) break;
-        const group = [...by.values()];
-        take(group);
-        out.push(group);
-      }
-    }
-    return out;
-  };
-
-  const sets = mode === 'run' ? [...runs(), ...groups()] : [...groups(), ...runs()];
-  const rest = [...pool].sort((a, b) => {
-    const ta = tiles[a];
-    const tb = tiles[b];
-    return mode === 'run' ? ta.color - tb.color || ta.num - tb.num : ta.num - tb.num || ta.color - tb.color;
-  });
-  rest.push(...ids.filter((id) => tiles[id].joker));
-  return { sets, rest };
-}
-
-function layoutRack(sets: number[][], rest: number[], rows: number): Cells {
-  const cells: Cells = [];
-  for (const set of sets) {
-    const col = cells.length % RACK_COLS;
-    if (col !== 0) {
-      if (col + 1 + set.length > RACK_COLS) while (cells.length % RACK_COLS) cells.push(null);
-      else cells.push(null);
-    }
-    cells.push(...set);
-  }
-  if (rest.length) {
-    if (cells.length % RACK_COLS) cells.push(null);
-    cells.push(...rest);
-  }
-  return cells.length <= rows * RACK_COLS ? cells : [...sets.flat(), ...rest];
-}
 
 function locate(x: number, y: number): Loc | null {
   const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-zone]');
@@ -198,6 +84,25 @@ const Ring = memo(function Ring({ deadline, total }: { deadline: number; total: 
 const Seconds = memo(function Seconds({ deadline }: { deadline: number }) {
   const s = Math.ceil(useTimeLeft(deadline) / 1000);
   return <span className={`secs ${s <= 10 ? 'low' : ''}`}> · {s}с</span>;
+});
+
+const Countdown = memo(function Countdown({ deadline, root }: { deadline: number; root: { current: HTMLElement | null } }) {
+  const s = Math.ceil(useTimeLeft(deadline) / 1000);
+  const hurry = s > 0 && s <= 10;
+  useEffect(() => {
+    if (hurry) audio.clock(s <= 3);
+  }, [s, hurry]);
+  useEffect(() => {
+    const el = root.current;
+    el?.classList.toggle('hurry', hurry);
+    return () => el?.classList.remove('hurry');
+  }, [hurry, root]);
+  if (!hurry) return null;
+  return (
+    <div className="countdown" key={s} aria-hidden>
+      {s}
+    </div>
+  );
 });
 
 interface CellProps {
@@ -257,6 +162,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
   const turnKey = useRef('');
   const lastTurn = useRef({ id: view.turnId, player: view.turnPlayerId });
   const prevRack = useRef<Set<number> | null>(null);
+  const prevCounts = useRef<Map<string, number> | null>(null);
   const draftTimer = useRef<number | null>(null);
   const rejectTimer = useRef<number | null>(null);
   boardRef.current = board;
@@ -284,10 +190,40 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
       const added = view.rack.filter((id) => !before.has(id));
       if (added.length) {
         const bag = poolRef.current?.getBoundingClientRect();
-        if (bag) added.forEach((id) => origins.current.set(id, { x: bag.left, y: bag.top }));
+        if (bag) added.forEach((id) => origins.current.set(id, { x: bag.left, y: bag.top, kind: 'fly' }));
         setFresh(new Set(added));
       }
     }
+
+    const counts = new Map(view.players.map((p) => [p.id, p.count]));
+    const root = rootRef.current;
+    const bag = poolRef.current?.getBoundingClientRect();
+    if (root && bag && prevCounts.current && playing && !reduceMotion()) {
+      for (const p of view.players) {
+        const was = prevCounts.current.get(p.id);
+        if (p.id === view.you || was === undefined || p.count <= was) continue;
+        const chip = root.querySelector(`[data-player="${p.id}"]`)?.getBoundingClientRect();
+        if (!chip) continue;
+        const card = document.createElement('div');
+        card.className = 'fly-tile';
+        root.appendChild(card);
+        const dx = chip.left + 8 - bag.left;
+        const dy = chip.top + 4 - bag.top;
+        card.style.left = `${bag.left + 10}px`;
+        card.style.top = `${bag.top + 4}px`;
+        card
+          .animate(
+            [
+              { transform: 'translate(0, 0) scale(0.5)', opacity: 0 },
+              { transform: `translate(${dx * 0.5}px, ${dy * 0.5 + 54}px) scale(1.15) rotate(-8deg)`, opacity: 1, offset: 0.5 },
+              { transform: `translate(${dx}px, ${dy}px) scale(0.6)`, opacity: 0.2 },
+            ],
+            { duration: 820, easing: 'ease-in-out' },
+          )
+          .finished.finally(() => card.remove());
+      }
+    }
+    prevCounts.current = counts;
 
     boardRef.current = next;
     setBoard(next);
@@ -375,18 +311,37 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
         const dx = from.x - rect.left;
         const dy = from.y - rect.top;
         const dist = Math.hypot(dx, dy);
-        if (dist < 1) return;
-        el.animate([{ transform: `translate(${dx}px, ${dy}px)`, zIndex: 5 }, { transform: 'translate(0, 0)', zIndex: 5 }], {
-          duration: Math.min(460, 170 + dist * 0.35),
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-        });
+        const at = `translate(${dx}px, ${dy}px)`;
+        if (from.kind === 'fly') {
+          el.animate(
+            [
+              { transform: `${at} scale(0.55) rotate(-12deg)`, opacity: 0.3, zIndex: 6 },
+              { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 46}px) scale(1.25) rotate(4deg)`, opacity: 1, zIndex: 6, offset: 0.62 },
+              { transform: 'translate(0, 0) scale(1)', opacity: 1, zIndex: 6 },
+            ],
+            { duration: 780, easing: 'ease-in-out' },
+          );
+        } else if (from.kind === 'drop') {
+          el.animate(
+            [
+              { transform: `${at} translateY(-4px) rotate(3deg) scale(1.08)`, zIndex: 6 },
+              { transform: 'translate(0, 0) scale(1)', zIndex: 6 },
+            ],
+            { duration: Math.min(520, 240 + dist * 0.4), easing: EASE },
+          );
+        } else if (dist >= 1) {
+          el.animate([{ transform: at, zIndex: 5 }, { transform: 'translate(0, 0)', zIndex: 5 }], {
+            duration: Math.min(620, 280 + dist * 0.45),
+            easing: EASE,
+          });
+        }
       } else {
         el.animate(
           [
             { transform: 'translateY(10px) scale(0.6)', opacity: 0 },
             { transform: 'translateY(0) scale(1)', opacity: 1 },
           ],
-          { duration: 280, delay: first ? dealt++ * 22 : 0, fill: 'backwards', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+          { duration: 320, delay: first ? dealt++ * 28 : 0, fill: 'backwards', easing: EASE },
         );
       }
     });
@@ -420,7 +375,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
       s.forEach((v, i) => v !== null && moving.has(v) && (s[i] = null));
     }
     let ok: boolean;
-    if (to.zone === 'board') ok = insertGroup(b[to.r], to.c, ids);
+    if (to.zone === 'board') ok = dropOnBoard(b[to.r], to.c, ids, tiles);
     else {
       const row = s.slice(to.r * RACK_COLS, (to.r + 1) * RACK_COLS);
       ok = insertGroup(row, to.c, ids);
@@ -475,7 +430,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
         : c < RACK_COLS
           ? (rackRef.current[g.from.r * RACK_COLS + c] ?? null)
           : null;
-    if (next === null) return;
+    if (next === null || !continuesSet(g.ids.map((id) => tiles[id]), tiles[next])) return;
     g.ids = [...g.ids, next];
     setPicked(g.ids);
     audio.pick(g.ids.length);
@@ -509,7 +464,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
     setHover(null, 0);
     setPicked([]);
     if (!g.started) return;
-    g.ids.forEach((id, i) => origins.current.set(id, { x: e.clientX - g.offX + i * (g.w + GAP), y: e.clientY - g.offY }));
+    g.ids.forEach((id, i) => origins.current.set(id, { x: e.clientX - g.offX + i * (g.w + GAP), y: e.clientY - g.offY, kind: 'drop' }));
     const to = e.type === 'pointercancel' ? null : locate(e.clientX, e.clientY);
     if (to) moveGroup(g.ids, g.from, to);
     setDrag(null);
@@ -788,6 +743,8 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
           ))}
         </div>
       )}
+
+      {myTurn && deadline !== null && <Countdown deadline={deadline} root={rootRef} />}
 
       {banner !== null && playing && (
         <div className="turn-banner" key={banner} aria-hidden>
