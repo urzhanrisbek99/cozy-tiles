@@ -101,3 +101,33 @@ test('sorting only groups real sets of three or more', () => {
   ]);
   assert.deepEqual(runs.rest, [id(0, 2, 1), id(1, 6), id(2, 10)]);
 });
+
+const JOKER = 104;
+const six = () => row(id(0, 6), id(0, 7), id(0, 8), id(0, 9), id(0, 10), id(0, 11));
+
+test('the real tile takes the place of a joker and frees it', () => {
+  const want = [null, id(0, 9), id(0, 10), id(0, 11), null, JOKER, null];
+  for (const c of [1, 2, 3]) {
+    assert.deepEqual(drop(row(null, id(0, 9), JOKER, id(0, 11)), c, id(0, 10)).slice(0, 7), want, `dropped at ${c}`);
+  }
+  assert.equal(tiles[JOKER].joker, true);
+});
+
+test('a joker is only swapped out when the tile is dropped on it or cannot be added', () => {
+  assert.deepEqual(drop(row(id(0, 9), id(0, 10), JOKER), 2, id(0, 11)).slice(0, 6), [id(0, 9), id(0, 10), id(0, 11), null, JOKER, null]);
+  assert.deepEqual(drop(row(id(0, 9), id(0, 10), JOKER), 0, id(0, 11)).slice(0, 6), [id(0, 9), id(0, 10), id(0, 11), JOKER, null, null]);
+  assert.deepEqual(drop(row(id(0, 9), JOKER, id(0, 11)), 1, id(1, 4)).slice(0, 6), [null, id(1, 4), null, id(0, 9), JOKER, id(0, 11)]);
+});
+
+test('a tile dropped into the middle of a long run splits it', () => {
+  assert.deepEqual(drop(six(), 3, id(0, 9, 1)).slice(0, 8), [id(0, 6), id(0, 7), id(0, 8), id(0, 9, 1), null, id(0, 9), id(0, 10), id(0, 11)]);
+  assert.deepEqual(drop(six(), 3, id(0, 8, 1)).slice(0, 8), [id(0, 6), id(0, 7), id(0, 8), null, id(0, 8, 1), id(0, 9), id(0, 10), id(0, 11)]);
+  const seven = id(0, 7, 1);
+  const split = [id(0, 6), id(0, 7), id(0, 8), null, seven, null, id(0, 9), id(0, 10), id(0, 11), null];
+  for (const c of [2, 3, 4]) assert.deepEqual(drop(six(), c, seven).slice(0, 10), split, `dropped at ${c}`);
+  assert.deepEqual(drop(six(), 3, id(2, 2)).slice(0, 10), [id(0, 6), id(0, 7), id(0, 8), null, id(2, 2), null, id(0, 9), id(0, 10), id(0, 11), null]);
+});
+
+test('a misfit dropped on the edge of a run does not split it', () => {
+  assert.deepEqual(drop(six(), 0, id(2, 2)).slice(0, 9), [id(2, 2), null, id(0, 6), id(0, 7), id(0, 8), id(0, 9), id(0, 10), id(0, 11), null]);
+});

@@ -6,4 +6,3 @@ services:
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /healthz
-    numInstances: 1

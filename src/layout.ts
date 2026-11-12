@@ -63,7 +63,7 @@ function couldBeSet(cells: number[], tiles: Tile[]) {
   return isSet(cells, tiles);
 }
 
-function joinSet(set: number[], ids: number[], pointer: number, tiles: Tile[]): number[][] | null {
+function joinSet(set: number[], ids: number[], pointer: number, onCell: number | null, tiles: Tile[]): number[][] | null {
   const fits = (cells: number[]) => couldBeSet(cells, tiles);
   const valid = (cells: number[]) => isSet(cells, tiles);
   let best: number[][] | null = null;
@@ -75,16 +75,38 @@ function joinSet(set: number[], ids: number[], pointer: number, tiles: Tile[]): 
       bestDist = dist;
     }
   };
+
+  const swapJoker = (j: number) => {
+    if (ids.length !== 1 || tiles[ids[0]].joker || !tiles[set[j]]?.joker) return null;
+    const swapped = set.slice();
+    swapped[j] = ids[0];
+    return fits(swapped) ? [swapped, [set[j]]] : null;
+  };
+  const direct = onCell === null ? null : swapJoker(onCell);
+  if (direct) return direct;
+
   for (let i = 0; i <= set.length; i++) {
     const merged = [...set.slice(0, i), ...ids, ...set.slice(i)];
     if (fits(merged)) consider(i, [merged]);
   }
   if (best) return best;
+
+  for (let j = 0; j < set.length; j++) {
+    const swapped = swapJoker(j);
+    if (swapped) consider(j, swapped);
+  }
+  if (best) return best;
+
   for (let i = 1; i < set.length; i++) {
     const left = set.slice(0, i);
     const right = set.slice(i);
     if (valid([...left, ...ids]) && valid(right)) consider(i, [[...left, ...ids], right]);
     if (valid(left) && valid([...ids, ...right])) consider(i, [left, [...ids, ...right]]);
+  }
+  if (best || onCell === null || onCell === 0) return best;
+
+  for (let i = 1; i < set.length; i++) {
+    if (Math.abs(i - pointer) <= 1 && valid(set.slice(0, i)) && valid(set.slice(i))) consider(i, [set.slice(0, i), ids, set.slice(i)]);
   }
   return best;
 }
@@ -112,14 +134,17 @@ export function planDrop(row: Cells, c: number, ids: number[], tiles: Tile[]): C
   let anchor = -1;
   for (const t of under >= 0 ? [under, ...near] : near) {
     const set = blocks[t];
-    const parts = joinSet(set.cells, ids, Math.max(0, Math.min(c - set.want, set.cells.length)), tiles);
+    const parts = joinSet(set.cells, ids, Math.max(0, Math.min(c - set.want, set.cells.length)), t === under ? c - set.want : null, tiles);
     if (!parts) continue;
-    const prepended = parts[0][0] === ids[0];
-    const want = prepended ? Math.min(set.want, start) : set.want;
-    const next: Block[] = [{ cells: parts[0], want }];
-    if (parts[1]) next.push({ cells: parts[1], want: want + parts[0].length + 1 });
+    const prepended = parts.length === 1 && parts[0][0] === ids[0];
+    let want = prepended ? Math.min(set.want, start) : set.want;
+    const next = parts.map((cells) => {
+      const block: Block = { cells, want };
+      want += cells.length + 1;
+      return block;
+    });
     blocks.splice(t, 1, ...next);
-    anchor = parts[1] && parts[1].includes(ids[0]) ? t + 1 : t;
+    anchor = t;
     break;
   }
   if (anchor < 0) {
