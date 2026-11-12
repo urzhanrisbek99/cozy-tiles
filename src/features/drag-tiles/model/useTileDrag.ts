@@ -35,6 +35,7 @@ interface Options {
   canExtend: (ids: number[], next: number) => boolean;
   landing: (ids: number[], to: Loc) => Loc[];
   onExtend: (count: number) => void;
+  onMove: (at: Point) => void;
   onDrop: (ids: number[], from: Loc, to: Loc | null, released: Point[]) => void;
 }
 
@@ -95,6 +96,7 @@ export function useTileDrag(options: Options) {
       setDrag({ ids: g.ids, zone: g.from.zone });
     }
     placeGhost();
+    latest.current.onMove(g.at);
     highlight(locate(g.at.x, g.at.y), g.ids);
   };
 

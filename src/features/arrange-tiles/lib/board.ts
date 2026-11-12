@@ -166,6 +166,30 @@ export function planRow(row: Cells, c: number, ids: number[], tiles: Tile[], { f
   }
 }
 
+export function liftFromBoard(grid: Grid, ids: number[], tiles: Tile[]): Grid {
+  const lifted = new Set(ids);
+  return grid.map((source) => {
+    if (!source.some((v) => v !== null && lifted.has(v))) return source.slice();
+    const row = source.map((v) => (v !== null && lifted.has(v) ? null : v));
+    for (let end = row.length - 1; end > 0; end--) {
+      const wasLifted = (i: number) => source[i] !== null && lifted.has(source[i]!);
+      if (!wasLifted(end - 1) || row[end] === null) continue;
+      let hole = end - 1;
+      while (hole > 0 && wasLifted(hole - 1)) hole--;
+      if (hole === 0 || row[hole - 1] === null) continue;
+      let left = hole - 1;
+      while (left > 0 && row[left - 1] !== null) left--;
+      let right = end;
+      while (right < row.length && row[right] !== null) right++;
+      const tail = row.slice(end, right) as number[];
+      if (!couldBeSet([...(row.slice(left, hole) as number[]), ...tail], tiles)) continue;
+      row.fill(null, hole, right);
+      tail.forEach((id, i) => (row[hole + i] = id));
+    }
+    return row;
+  });
+}
+
 function shelve(grid: Grid, from: number, set: number[]): boolean {
   const rows = grid
     .map((_, r) => r)

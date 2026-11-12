@@ -9,6 +9,7 @@ import {
   dropOnBoard,
   fitRack,
   insertGroup,
+  liftFromBoard,
   planBoard,
   sortRack,
   type Cells,
@@ -29,6 +30,8 @@ import { TILE_GAP, useTileSizes } from '../model/useTileSizes';
 
 const DRAFT_THROTTLE_MS = 120;
 const REJECT_FLASH_MS = 1600;
+const SCROLL_EDGE = 40;
+const SCROLL_STEP = 14;
 
 interface Props {
   view: RoomView;
@@ -59,6 +62,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const boardAreaRef = useRef<HTMLDivElement>(null);
+  const rackAreaRef = useRef<HTMLDivElement>(null);
   const poolRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef(board);
   const rackRef = useRef(rack);
@@ -90,7 +94,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
       return false;
     }
     const moving = new Set(ids);
-    let nextBoard: Grid | null = boardRef.current.map((row) => without(row, moving));
+    let nextBoard: Grid | null = liftFromBoard(boardRef.current, ids, tiles);
     const cells = without(rackRef.current, moving);
     if (to.zone === 'board') nextBoard = dropOnBoard(nextBoard, to.r, to.c, ids, tiles, dropOptions);
     else {
@@ -121,18 +125,21 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     const plain = ids.map((_, i) => ({ ...to, c: start + i }));
     if (to.zone !== 'board' || !myTurn) return plain;
     const moving = new Set(ids);
-    const plan = planBoard(
-      boardRef.current.map((row) => without(row, moving)),
-      to.r,
-      to.c,
-      ids,
-      tiles,
-      dropOptions,
-    );
+    const plan = planBoard(liftFromBoard(boardRef.current, ids, tiles), to.r, to.c, ids, tiles, dropOptions);
     if (!plan) return plain;
     const cells: Loc[] = [];
     plan.forEach((row, r) => row.forEach((v, c) => v !== null && moving.has(v) && cells.push({ zone: 'board', r, c })));
     return cells;
+  };
+
+  const scrollNearEdge = ({ x, y }: { x: number; y: number }) => {
+    for (const el of [boardAreaRef.current, rackAreaRef.current]) {
+      if (!el || el.scrollWidth <= el.clientWidth) continue;
+      const rect = el.getBoundingClientRect();
+      if (y < rect.top || y > rect.bottom) continue;
+      if (x < rect.left + SCROLL_EDGE) el.scrollLeft -= SCROLL_STEP;
+      else if (x > rect.right - SCROLL_EDGE) el.scrollLeft += SCROLL_STEP;
+    }
   };
 
   const drag = useTileDrag({
@@ -147,6 +154,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     canExtend: (ids, next) => continuesSet(ids.map((id) => tiles[id]), tiles[next]),
     landing: landingCells,
     onExtend: (count) => audio.pick(count),
+    onMove: scrollNearEdge,
     onDrop: (ids, from, to, released) => {
       ids.forEach((id, i) => motion.startFrom(id, { ...released[i], kind: 'drop' }));
       if (to) moveTiles(ids, from, to);
@@ -205,11 +213,6 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
       document.title = 'Cozy Tiles';
     };
   }, [myTurn, view.turnId]);
-
-  const won = view.phase === 'ended' && view.result?.winnerId === view.you;
-  useEffect(() => {
-    if (won) audio.win();
-  }, [won]);
 
   useEffect(
     () => () => {
@@ -274,8 +277,9 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
       <PlayersBar view={view} deadline={deadline} placedThisTurn={analysis.placed} poolRef={poolRef} />
 
       <div className={`status-line ${myTurn ? 'mine' : ''}`} aria-live="polite">
-        {myTurn ? <strong>Твой ход ✨</strong> : <span>Ходит {turnPlayer?.name ?? '…'}</span>}
-        {view.last && <span className="last">· {view.last}</span>}
+        {myTurn && <strong>Твой ход ✨</strong>}
+        {!myTurn && turnPlayer && <span>Ходит {turnPlayer.name}</span>}
+        {view.last && <span className="last">{playing ? '· ' : ''}{view.last}</span>}
         {myTurn && !view.melded && (
           <span className={`meld ${analysis.meldValue >= INITIAL_MELD ? 'ok' : ''}`}>
             Первый выход: {analysis.meldValue} / {INITIAL_MELD}
@@ -283,7 +287,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
         )}
       </div>
 
-      <div className="board-wrap" ref={boardAreaRef}>
+      <div className="board-wrap" ref={boardAreaRef} onScroll={motion.forgetPlaces}>
         <div className={`board ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
           {board.map((row, r) =>
             row.map((id, c) => (
@@ -305,7 +309,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
         <div className="decor">
           <SleepyCat awake={myTurn} />
         </div>
-        <div className={`rack ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
+        <div className={`rack ${myTurn ? 'active' : ''}`} ref={rackAreaRef} onPointerDown={drag.onPointerDown} onScroll={motion.forgetPlaces}>
           {rack.map((id, i) => (
             <Cell
               key={i}
@@ -321,6 +325,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
         <TurnActions
           canAct={myTurn && !busy}
           canFinish={analysis.placed > 0}
+          canDraw={analysis.placed === 0}
           canReset={board !== view.board}
           poolEmpty={view.pool === 0}
           onSort={sortTiles}
@@ -354,6 +359,8 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
           Твой ход ✨
         </div>
       )}
+
+      <div className="rotate-hint">Поверни телефон вертикально 📱</div>
 
       {view.phase === 'ended' && view.result && <GameResult view={view} onLeave={onLeave} flash={flash} />}
     </div>

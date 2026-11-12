@@ -91,8 +91,7 @@ function takeGroups(pool: Set<number>, tiles: Tile[]) {
 
 export function arrange(ids: number[], tiles: Tile[], mode: SortMode) {
   const pool = new Set(ids.filter((id) => !tiles[id].joker));
-  const sets =
-    mode === 'run' ? [...takeRuns(pool, tiles), ...takeGroups(pool, tiles)] : [...takeGroups(pool, tiles), ...takeRuns(pool, tiles)];
+  const sets = mode === 'run' ? takeRuns(pool, tiles) : takeGroups(pool, tiles);
   const rest = [...pool].sort((a, b) => {
     const ta = tiles[a];
     const tb = tiles[b];

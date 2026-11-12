@@ -21,13 +21,13 @@ export function Controls({
   return (
     <nav className="controls" aria-label="Настройки">
       <div className="pill themes" role="radiogroup" aria-label="Тема">
-        {THEMES.map((t) => (
+        {THEMES.map((t, i) => (
           <button
             key={t.id}
             role="radio"
             aria-checked={prefs.theme === t.id}
             className={prefs.theme === t.id ? 'on' : ''}
-            onClick={() => update({ theme: t.id })}
+            onClick={() => update({ theme: prefs.theme === t.id ? THEMES[(i + 1) % THEMES.length].id : t.id })}
             title={t.label}
           >
             {t.icon}

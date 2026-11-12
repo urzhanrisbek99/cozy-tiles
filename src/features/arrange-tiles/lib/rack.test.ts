@@ -27,9 +27,14 @@ test('hold-select only continues along a real combination', () => {
 test('sorting only groups real sets of three or more', () => {
   const ids = [id(0, 1), id(0, 2), id(0, 3), id(0, 2, 1), id(1, 6), id(2, 10), id(3, 12), id(0, 12), id(2, 12)];
   const runs = arrange(ids, tiles, 'run');
-  assert.deepEqual(runs.sets, [
-    [id(0, 1), id(0, 2), id(0, 3)],
-    [id(0, 12), id(2, 12), id(3, 12)],
-  ]);
-  assert.deepEqual(runs.rest, [id(0, 2, 1), id(1, 6), id(2, 10)]);
+  assert.deepEqual(runs.sets, [[id(0, 1), id(0, 2), id(0, 3)]]);
+  assert.deepEqual(runs.rest, [id(0, 2, 1), id(0, 12), id(1, 6), id(2, 10), id(2, 12), id(3, 12)]);
+});
+
+test('each sort button only collects its own kind of set', () => {
+  const ids = [id(0, 1), id(0, 2), id(0, 3), id(1, 3), id(2, 3), id(3, 9)];
+  assert.deepEqual(arrange(ids, tiles, 'run').sets, [[id(0, 1), id(0, 2), id(0, 3)]]);
+  const groups = arrange(ids, tiles, 'group');
+  assert.deepEqual(groups.sets, [[id(0, 3), id(1, 3), id(2, 3)]]);
+  assert.deepEqual(groups.rest, [id(0, 1), id(0, 2), id(3, 9)]);
 });

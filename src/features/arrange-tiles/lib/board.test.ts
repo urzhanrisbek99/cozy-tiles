@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTiles, emptyGrid } from '@core/rules';
-import { planBoard, planRow } from './board';
+import { liftFromBoard, planBoard, planRow } from './board';
 import type { Cells } from './rack';
 
 const tiles = createTiles(2);
@@ -124,4 +124,20 @@ test('before the first meld a tile never joins a set that is already on the tabl
   const plan = planRow(run(), 6, [id(0, 11)], tiles, { frozen });
   assert.ok(plan);
   assert.deepEqual(plan.row.slice(0, 8), [null, id(0, 7), id(0, 8), id(0, 9), id(0, 10), null, id(0, 11), null]);
+});
+
+test('taking a tile out of a group closes the gap', () => {
+  const grid = [row(null, id(0, 1), id(1, 1), id(2, 1), id(3, 1), null, id(0, 9))];
+  const next = liftFromBoard(grid, [id(2, 1)], tiles);
+  assert.deepEqual(next[0].slice(0, 7), [null, id(0, 1), id(1, 1), id(3, 1), null, null, id(0, 9)]);
+});
+
+test('taking a tile out of the middle of a run leaves the two halves apart', () => {
+  const next = liftFromBoard([six()], [id(0, 8)], tiles);
+  assert.deepEqual(next[0].slice(0, 6), [id(0, 6), id(0, 7), null, id(0, 9), id(0, 10), id(0, 11)]);
+});
+
+test('taking tiles from the end of a set moves nothing', () => {
+  const next = liftFromBoard([six()], [id(0, 10), id(0, 11)], tiles);
+  assert.deepEqual(next[0].slice(0, 6), [id(0, 6), id(0, 7), id(0, 8), id(0, 9), null, null]);
 });

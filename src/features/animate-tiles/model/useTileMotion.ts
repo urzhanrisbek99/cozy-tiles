@@ -73,5 +73,8 @@ export function useTileMotion(root: RefObject<HTMLElement | null>, layoutKey: st
 
   return useRef({
     startFrom: (id: number, origin: Origin) => origins.current.set(id, origin),
+    forgetPlaces: () => {
+      lastLayout.current = 'moved';
+    },
   }).current;
 }

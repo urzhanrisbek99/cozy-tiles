@@ -75,6 +75,7 @@ export function PlayersBar({ view, deadline, placedThisTurn, poolRef }: Props) {
             <div className="chip-avatar">
               <CatFace coat={p.avatar} awake={turn} />
               {turn && deadline !== null && view.turnSeconds > 0 && <TimerRing deadline={deadline} total={view.turnSeconds} />}
+              {!p.left && <span className="chip-count">{count}</span>}
             </div>
             <div className="chip-text">
               <span className="chip-name">

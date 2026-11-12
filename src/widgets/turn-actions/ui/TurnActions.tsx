@@ -6,6 +6,7 @@ const REACTIONS = ['🐾', '❤️', '😹', '☕', '👏', '😴'];
 interface Props {
   canAct: boolean;
   canFinish: boolean;
+  canDraw: boolean;
   canReset: boolean;
   poolEmpty: boolean;
   onSort: (mode: SortMode) => void;
@@ -14,7 +15,7 @@ interface Props {
   onReset: () => void;
 }
 
-export function TurnActions({ canAct, canFinish, canReset, poolEmpty, onSort, onFinish, onDraw, onReset }: Props) {
+export function TurnActions({ canAct, canFinish, canDraw, canReset, poolEmpty, onSort, onFinish, onDraw, onReset }: Props) {
   return (
     <div className="actions">
       <div className="sort-row">
@@ -28,11 +29,11 @@ export function TurnActions({ canAct, canFinish, canReset, poolEmpty, onSort, on
       <button className="primary" disabled={!canAct || !canFinish} onClick={onFinish}>
         Готово
       </button>
-      <button className="soft" disabled={!canAct} onClick={onDraw}>
+      <button className="soft" disabled={!canAct || !canDraw} onClick={onDraw}>
         {poolEmpty ? 'Пас' : 'Взять плитку'}
       </button>
-      <button className="ghost small" disabled={!canAct || !canReset} onClick={onReset}>
-        ↺ Сбросить
+      <button className="ghost small reset" disabled={!canAct || !canReset} onClick={onReset} title="Сбросить ход">
+        ↺ <span>Сбросить</span>
       </button>
       <div className="reactions">
         {REACTIONS.map((emoji) => (

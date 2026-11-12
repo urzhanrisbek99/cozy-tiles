@@ -7,20 +7,34 @@ const TILE_RATIO = 1.3;
 const BOARD_PADDING = 28;
 const SIDE_DECOR = 380;
 const SIDE_ACTIONS = 250;
+const PHONE_WIDTH = 520;
+const PHONE_BOARD_COLS = 10;
+const PHONE_RACK_COLS = 8.5;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.floor(value)));
+const isPhone = () => window.innerWidth <= PHONE_WIDTH;
+
+function rackTile() {
+  const width = window.innerWidth;
+  if (isPhone()) return clamp((width - 40 - TILE_GAP * 8) / PHONE_RACK_COLS, 32, 46);
+  const side = (width > 1280 ? SIDE_DECOR : 0) + (width > 900 ? SIDE_ACTIONS : 0);
+  return clamp((width - side - 48 - TILE_GAP * (RACK_COLS - 1)) / RACK_COLS, 30, 50);
+}
+
+function boardTile(area: HTMLElement) {
+  const { width, height } = area.getBoundingClientRect();
+  const cols = isPhone() ? PHONE_BOARD_COLS : BOARD_COLS;
+  const byWidth = (width - BOARD_PADDING - TILE_GAP * (cols - 1)) / cols;
+  const byHeight = (height - BOARD_PADDING - TILE_GAP * (BOARD_ROWS - 1)) / BOARD_ROWS / TILE_RATIO;
+  return clamp(Math.min(byWidth, byHeight), isPhone() ? 20 : 16, 52);
+}
 
 export function useTileSizes(boardArea: RefObject<HTMLElement | null>) {
   const [board, setBoard] = useState(40);
-  const [rack, setRack] = useState(48);
+  const [rack, setRack] = useState(rackTile);
 
   useEffect(() => {
-    const measure = () => {
-      const width = window.innerWidth;
-      const side = (width > 1280 ? SIDE_DECOR : 0) + (width > 900 ? SIDE_ACTIONS : 0);
-      setRack(clamp((width - side - 48 - TILE_GAP * (RACK_COLS - 1)) / RACK_COLS, 30, 50));
-    };
-    measure();
+    const measure = () => setRack(rackTile());
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
@@ -28,12 +42,7 @@ export function useTileSizes(boardArea: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const el = boardArea.current;
     if (!el) return;
-    const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
-      const byWidth = (width - BOARD_PADDING - TILE_GAP * (BOARD_COLS - 1)) / BOARD_COLS;
-      const byHeight = (height - BOARD_PADDING - TILE_GAP * (BOARD_ROWS - 1)) / BOARD_ROWS / TILE_RATIO;
-      setBoard(clamp(Math.min(byWidth, byHeight), 16, 52));
-    };
+    const measure = () => setBoard(boardTile(el));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);

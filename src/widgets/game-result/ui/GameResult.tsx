@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import type { RoomView } from '@core/types';
 import { CatFace } from '@/entities/player';
 import { call } from '@/shared/api/socket';
+import { audio } from '@/shared/lib/audio/engine';
+import { Confetti } from '@/shared/ui/Confetti';
 
 interface Props {
   view: RoomView;
@@ -12,13 +15,20 @@ export function GameResult({ view, onLeave, flash }: Props) {
   const result = view.result!;
   const winner = result.ranks[0];
   const isHost = view.hostId === view.you;
+  const won = winner.id === view.you;
+
+  useEffect(() => {
+    audio.celebrate(won);
+  }, [won]);
+
   const reason =
     result.reason === 'out' ? 'выложил(а) все плитки' : result.reason === 'stalemate' ? 'меньше всего очков в руке' : 'остался(ась) за столом';
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <Confetti />
       <div className="card end-card">
         <CatFace coat={winner.avatar} awake className="end-cat" />
-        <h2 id="end-title">{winner.id === view.you ? 'Ты победил(а)! 🎉' : `${winner.name} побеждает!`}</h2>
+        <h2 id="end-title">{won ? 'Ты победил(а)! 🎉' : `${winner.name} побеждает!`}</h2>
         <p className="muted">{reason}</p>
         <table className="ranks">
           <thead>

@@ -161,8 +161,20 @@ export class CozyAudio {
     o.stop(t + 0.16);
   }
 
-  win() {
-    this.melody([72, 76, 79, 84, 88], 0.11, 0.07);
+  celebrate(winner: boolean) {
+    const ctx = this.sfxCtx();
+    if (!ctx) return;
+    if (!winner) {
+      this.melody([72, 76, 79, 84], 0.12, 0.07);
+      return;
+    }
+    this.melody([72, 76, 79, 84, 79, 84, 88, 91, 96], 0.12, 0.09);
+    const t0 = ctx.currentTime + 0.05;
+    for (const at of [0.15, 0.7, 1.3, 1.9, 2.6, 3.3]) {
+      const t = t0 + at;
+      this.noiseHit(t, 'bandpass', 700 + Math.random() * 900, 0.3, 0.4, this.sfxBus);
+      this.noiseHit(t + 0.08, 'highpass', 5000, 0.08, 0.6, this.sfxBus);
+    }
   }
 
   oops() {
