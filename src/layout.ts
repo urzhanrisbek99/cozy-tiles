@@ -176,7 +176,7 @@ export function continuesSet(picked: Tile[], next: Tile) {
   if (picked.length > 1) return setValue([...picked, next]) !== null;
   const a = picked[0];
   if (a.joker || next.joker) return true;
-  return a.color === next.color ? Math.abs(a.num - next.num) === 1 : a.num === next.num;
+  return a.color === next.color ? next.num === a.num + 1 : a.num === next.num;
 }
 
 export function arrange(ids: number[], tiles: Tile[], mode: SortMode) {

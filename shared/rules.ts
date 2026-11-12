@@ -78,23 +78,12 @@ function runValue(tiles: Tile[]): number | null {
     return ((lo + MAX_NUM) * tiles.length) / 2;
   }
   if (real.some((t) => t.color !== real[0].color)) return null;
-  for (const dir of [1, -1]) {
-    let start: number | null = null;
-    let ok = true;
-    tiles.forEach((t, i) => {
-      if (t.joker) return;
-      const s = t.num - dir * i;
-      if (start === null) start = s;
-      else if (start !== s) ok = false;
-    });
-    if (!ok || start === null) continue;
-    const end: number = start + dir * (tiles.length - 1);
-    const lo = Math.min(start, end);
-    const hi = Math.max(start, end);
-    if (lo < 1 || hi > MAX_NUM) continue;
-    return ((lo + hi) * tiles.length) / 2;
-  }
-  return null;
+  const at = tiles.findIndex((t) => !t.joker);
+  const lo = tiles[at].num - at;
+  const hi = lo + tiles.length - 1;
+  if (lo < 1 || hi > MAX_NUM) return null;
+  if (tiles.some((t, i) => !t.joker && t.num !== lo + i)) return null;
+  return ((lo + hi) * tiles.length) / 2;
 }
 
 export function setValue(tiles: Tile[]): number | null {

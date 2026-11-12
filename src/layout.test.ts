@@ -86,8 +86,7 @@ test('hold-select only continues along a real combination', () => {
   const t = (color: number, num: number) => tiles[id(color, num)];
   assert.equal(continuesSet([t(0, 7)], t(0, 8)), true);
   assert.equal(continuesSet([t(0, 7), t(0, 8)], t(0, 9)), true);
-  assert.equal(continuesSet([t(0, 8)], t(0, 7)), true);
-  assert.equal(continuesSet([t(0, 8), t(0, 7)], t(0, 9)), false);
+  assert.equal(continuesSet([t(0, 8)], t(0, 7)), false);
   assert.equal(continuesSet([t(0, 7)], t(1, 7)), true);
   assert.equal(continuesSet([t(0, 7)], t(1, 8)), false);
   assert.equal(continuesSet([t(0, 7)], t(0, 9)), false);

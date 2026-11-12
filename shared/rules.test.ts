@@ -13,7 +13,7 @@ test('tile set sizes', () => {
 
 test('runs', () => {
   assert.equal(setValue([t(0, 4), t(0, 5), t(0, 6)]), 15);
-  assert.equal(setValue([t(0, 6), t(0, 5), t(0, 4)]), 15);
+  assert.equal(setValue([t(0, 6), t(0, 5), t(0, 4)]), null);
   assert.equal(setValue([t(0, 4), J, t(0, 6)]), 15);
   assert.equal(setValue([J, t(0, 12), t(0, 13)]), 36);
   assert.equal(setValue([t(0, 12), t(0, 13), J]), null);
