@@ -146,12 +146,13 @@ export class Room {
     this.beginTurn();
   }
 
-  setDraft(byId: string, raw: unknown) {
-    if (this.current?.id !== byId) return;
+  setDraft(byId: string, raw: unknown): Grid | null {
+    if (this.current?.id !== byId) return null;
     const grid = sanitizeGrid(raw, this.tiles.length);
-    if (!grid) return;
+    if (!grid) return null;
     this.draft = grid;
-    this.touch();
+    this.lastSeen = Date.now();
+    return grid;
   }
 
   endTurn(byId: string, raw: unknown) {

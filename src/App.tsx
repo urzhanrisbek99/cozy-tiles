@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MAX_PLAYERS } from '../shared/rules';
+import { MAX_PLAYERS, type Grid } from '../shared/rules';
 import type { RoomView } from '../shared/types';
 import { audio, type Mood } from './audio/engine';
 import { CAT_COATS, CatFace } from './Cats';
@@ -29,6 +29,7 @@ const PID = playerId();
 export default function App() {
   const [prefs, update] = usePrefs();
   const [view, setView] = useState<RoomView | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
   const [connected, setConnected] = useState(socket.connected);
   const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
   const [rules, setRules] = useState(false);
@@ -54,12 +55,20 @@ export default function App() {
       }
     };
     const onDisconnect = () => setConnected(false);
-    socket.on('state', setView);
+    const onState = (v: RoomView) => {
+      setView(v);
+      setDeadline(v.turnEndsIn === null ? null : Date.now() + v.turnEndsIn);
+    };
+    const onDraft = (draft: Grid) =>
+      setView((v) => (v && v.phase === 'playing' && v.turnPlayerId !== v.you ? { ...v, draft } : v));
+    socket.on('state', onState);
+    socket.on('draft', onDraft);
     socket.on('connect', rejoin);
     socket.on('disconnect', onDisconnect);
     if (socket.connected) void rejoin();
     return () => {
-      socket.off('state', setView);
+      socket.off('state', onState);
+      socket.off('draft', onDraft);
       socket.off('connect', rejoin);
       socket.off('disconnect', onDisconnect);
     };
@@ -125,7 +134,7 @@ export default function App() {
         <Controls prefs={prefs} update={update} onRules={() => setRules(true)} onLeave={view ? leave : undefined} />
         {!view && <Home prefs={prefs} update={update} onCreate={() => enterRoom('room:create')} onJoin={(c) => enterRoom('room:join', c)} />}
         {view?.phase === 'lobby' && <Lobby view={view} flash={flash} onLeave={leave} />}
-        {inGame && <Game view={view} onLeave={leave} flash={flash} />}
+        {inGame && <Game view={view} deadline={deadline} onLeave={leave} flash={flash} />}
       </div>
       {!connected && <div className="offline-banner">Связь потерялась… переподключаемся ☁️</div>}
       {toast && (

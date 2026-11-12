@@ -132,8 +132,16 @@ export class CozyAudio {
     this.noiseHit(t, 'highpass', 2500, 0.05, 0.025, this.sfxBus);
   }
 
-  chime() {
-    this.melody([76, 83], 0.13, 0.07);
+  turn() {
+    this.melody([72, 79, 84], 0.12, 0.1);
+  }
+
+  pick(step: number) {
+    this.melody([79 + Math.min(step, 8) * 2], 0, 0.06, 'sine');
+  }
+
+  pop() {
+    this.melody([88, 91], 0.06, 0.05, 'sine');
   }
 
   win() {

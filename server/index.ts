@@ -135,7 +135,11 @@ io.on('connection', (socket) => {
     const room = socket.data.room as Room | undefined;
     const playerId = socket.data.playerId as string | undefined;
     if (!room || !playerId) return;
-    room.setDraft(playerId, grid);
+    const draft = room.setDraft(playerId, grid);
+    if (!draft) return;
+    for (const p of room.players) {
+      if (p.socketId && p.id !== playerId) io.to(p.socketId).emit('draft', draft);
+    }
   });
 
   socket.on('turn:end', (grid, reply) =>

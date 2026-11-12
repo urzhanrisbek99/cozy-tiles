@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { Mood } from './audio/engine';
 
 function seeded(seed: number) {
@@ -167,7 +167,7 @@ function Particles({ theme }: { theme: Mood }) {
     let w = 0;
     let h = 0;
     const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const dpr = Math.min(1.5, window.devicePixelRatio || 1);
       w = cv.clientWidth;
       h = cv.clientHeight;
       cv.width = w * dpr;
@@ -178,7 +178,7 @@ function Particles({ theme }: { theme: Mood }) {
     window.addEventListener('resize', resize);
 
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const base = { rain: 160, night: 110, autumn: 24, sakura: 42 }[theme];
+    const base = { rain: 110, night: 90, autumn: 22, sakura: 34 }[theme];
     const palette = {
       rain: ['rgba(225,232,255,0.35)'],
       night: ['#fff6d8', '#ffe9f4', '#e7e3ff'],
@@ -286,7 +286,7 @@ function Particles({ theme }: { theme: Mood }) {
   return <canvas ref={ref} className="particles" aria-hidden />;
 }
 
-export function Scene({ theme }: { theme: Mood }) {
+export const Scene = memo(function Scene({ theme }: { theme: Mood }) {
   return (
     <div className="scene" aria-hidden>
       <div className="sky" />
@@ -301,4 +301,4 @@ export function Scene({ theme }: { theme: Mood }) {
       <div className="vignette" />
     </div>
   );
-}
+});

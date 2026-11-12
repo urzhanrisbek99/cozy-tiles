@@ -22,6 +22,7 @@ export function Glyph({ color, className }: { color: number; className?: string 
 interface Props extends HTMLAttributes<HTMLDivElement> {
   tile: Tile;
   flags?: string;
+  'data-id'?: number;
 }
 
 export function TileView({ tile, flags = '', className = '', ...rest }: Props) {
