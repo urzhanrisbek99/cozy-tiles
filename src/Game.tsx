@@ -3,7 +3,7 @@ import { BOARD_COLS, BOARD_ROWS, INITIAL_MELD, gridIds, setValue, type Grid, typ
 import type { Reaction, RoomView } from '../shared/types';
 import { audio } from './audio/engine';
 import { CatFace, Mug, SleepyCat } from './Cats';
-import { RACK_COLS, arrange, continuesSet, dropOnBoard, fitRack, insertGroup, layoutRack, type Cells, type SortMode } from './layout';
+import { RACK_COLS, arrange, continuesSet, dropOnBoard, fitRack, insertGroup, layoutRack, planDrop, type Cells, type SortMode } from './layout';
 import { call, socket } from './net';
 import { TileView } from './TileView';
 
@@ -398,17 +398,25 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
     return true;
   };
 
-  const setHover = (to: Loc | null, count: number) => {
-    const cols = to?.zone === 'board' ? BOARD_COLS : RACK_COLS;
-    const start = to ? Math.max(0, Math.min(to.c, cols - count)) : 0;
-    const key = to ? `${to.zone}:${to.r}:${start}:${count}` : '';
+  const setHover = (to: Loc | null, ids: number[]) => {
+    const key = to ? `${to.zone}:${to.r}:${to.c}:${ids.length}` : '';
     if (key === hoverKey.current) return;
     hoverKey.current = key;
     hoverEls.current.forEach((el) => el.classList.remove('over'));
     hoverEls.current = [];
     if (!to) return;
-    for (let i = 0; i < count; i++) {
-      const el = rootRef.current?.querySelector(`[data-zone="${to.zone}"][data-r="${to.r}"][data-c="${start + i}"]`);
+    const count = ids.length;
+    const cols = to.zone === 'board' ? BOARD_COLS : RACK_COLS;
+    const start = Math.max(0, Math.min(to.c, cols - count));
+    let landing = ids.map((_, i) => start + i);
+    if (to.zone === 'board' && myTurn) {
+      const moving = new Set(ids);
+      const row = boardRef.current[to.r].map((v) => (v !== null && moving.has(v) ? null : v));
+      const plan = planDrop(row, to.c, ids, tiles);
+      if (plan) landing = ids.map((id) => plan.indexOf(id));
+    }
+    for (const c of landing) {
+      const el = rootRef.current?.querySelector(`[data-zone="${to.zone}"][data-r="${to.r}"][data-c="${c}"]`);
       if (!el) continue;
       el.classList.add('over');
       hoverEls.current.push(el);
@@ -450,7 +458,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
       setDrag({ ids: g.ids, zone: g.from.zone });
     }
     placeGhost();
-    setHover(locate(g.x, g.y), g.ids.length);
+    setHover(locate(g.x, g.y), g.ids);
   };
 
   const onUp = (e: PointerEvent) => {
@@ -461,7 +469,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
     window.removeEventListener('pointermove', winMove);
     window.removeEventListener('pointerup', winUp);
     window.removeEventListener('pointercancel', winUp);
-    setHover(null, 0);
+    setHover(null, []);
     setPicked([]);
     if (!g.started) return;
     g.ids.forEach((id, i) => origins.current.set(id, { x: e.clientX - g.offX + i * (g.w + GAP), y: e.clientY - g.offY, kind: 'drop' }));

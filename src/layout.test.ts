@@ -25,10 +25,54 @@ test('a tile that extends the set is inserted without a split', () => {
   assert.deepEqual(r.slice(0, 5), [id(0, 7), id(0, 8), id(0, 9), id(0, 10), null]);
 });
 
-test('a tile that fits nowhere is still inserted in place', () => {
-  const r = row(id(0, 7), id(0, 8), id(0, 9));
-  assert.equal(dropOnBoard(r, 1, [id(1, 2)], tiles), true);
-  assert.deepEqual(r.slice(0, 5), [id(0, 7), id(1, 2), id(0, 8), id(0, 9), null]);
+const run = () => row(null, null, id(0, 7), id(0, 8), id(0, 9), id(0, 10));
+const drop = (r: Cells, c: number, ...ids: number[]) => {
+  assert.equal(dropOnBoard(r, c, ids, tiles), true);
+  return r;
+};
+
+test('a tile that continues the run goes to its end wherever it is dropped', () => {
+  const want = [null, null, id(0, 7), id(0, 8), id(0, 9), id(0, 10), id(0, 11), null];
+  for (const c of [1, 2, 3, 4, 5, 6]) assert.deepEqual(drop(run(), c, id(0, 11)).slice(0, 8), want, `dropped at ${c}`);
+});
+
+test('a tile that continues the run at the front is prepended', () => {
+  assert.deepEqual(drop(run(), 4, id(0, 6)).slice(0, 7), [null, null, id(0, 6), id(0, 7), id(0, 8), id(0, 9), id(0, 10)]);
+  assert.deepEqual(drop(run(), 1, id(0, 6)).slice(0, 7), [null, id(0, 6), id(0, 7), id(0, 8), id(0, 9), id(0, 10), null]);
+});
+
+test('a tile that does not fit is kept apart and the run moves away from it', () => {
+  const twelve = id(0, 12);
+  assert.deepEqual(drop(run(), 2, twelve).slice(0, 9), [null, null, twelve, null, id(0, 7), id(0, 8), id(0, 9), id(0, 10), null]);
+  assert.deepEqual(drop(run(), 6, twelve).slice(0, 8), [null, id(0, 7), id(0, 8), id(0, 9), id(0, 10), null, twelve, null]);
+  assert.deepEqual(drop(run(), 3, twelve).slice(0, 10), [null, null, null, twelve, null, id(0, 7), id(0, 8), id(0, 9), id(0, 10), null]);
+});
+
+test('extending a set keeps the gap to its neighbour', () => {
+  const r = row(id(0, 7), id(0, 8), id(0, 9), null, id(1, 1), id(1, 2), id(1, 3));
+  drop(r, 3, id(0, 10));
+  assert.deepEqual(r.slice(0, 9), [id(0, 7), id(0, 8), id(0, 9), id(0, 10), null, id(1, 1), id(1, 2), id(1, 3), null]);
+});
+
+test('a tile dropped between two halves joins them', () => {
+  const r = row(null, id(0, 7), null, id(0, 9));
+  drop(r, 2, id(0, 8));
+  assert.deepEqual(r.slice(0, 5), [null, id(0, 7), id(0, 8), id(0, 9), null]);
+});
+
+test('a set can be built one tile at a time', () => {
+  const r = row(null, null, null, id(2, 5));
+  drop(r, 4, id(1, 5));
+  drop(r, 3, id(0, 5));
+  assert.deepEqual(r.slice(2, 7), [null, id(0, 5), id(2, 5), id(1, 5), null]);
+  drop(r, 6, id(3, 9));
+  assert.deepEqual(r.slice(2, 9), [id(0, 5), id(2, 5), id(1, 5), null, id(3, 9), null, null]);
+});
+
+test('sets never end up touching when the row is tight', () => {
+  const r: Cells = [id(0, 1), id(0, 2), id(0, 3), null, id(1, 5), id(1, 6), id(1, 7), null];
+  drop(r, 3, id(0, 4));
+  assert.deepEqual(r, [id(0, 1), id(0, 2), id(0, 3), id(0, 4), null, id(1, 5), id(1, 6), id(1, 7)]);
 });
 
 test('insertGroup keeps a group together when the row is tight on the right', () => {
