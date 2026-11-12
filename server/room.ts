@@ -130,7 +130,7 @@ export class Room {
     if (byId !== this.hostId) throw new RoomError('Начать игру может только хозяин комнаты');
     if (this.phase === 'playing') throw new RoomError('Игра уже идёт');
     if (this.players.length < MIN_PLAYERS) throw new RoomError('Нужно хотя бы 2 игрока');
-    this.turnSeconds = [0, 60, 90, 120, 180].includes(turnSeconds) ? turnSeconds : 90;
+    this.turnSeconds = [0, 30, 60, 90, 120].includes(turnSeconds) ? turnSeconds : 90;
     this.tiles = createTiles(this.players.length);
     this.pool = shuffle(this.tiles.map((t) => t.id));
     for (const p of this.players) {

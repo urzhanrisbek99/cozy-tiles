@@ -17,10 +17,10 @@ const THEMES: { id: Mood; icon: string; label: string; color: string }[] = [
 ];
 
 const TURN_OPTIONS = [
+  { value: 30, label: '30 сек' },
   { value: 60, label: '1 мин' },
   { value: 90, label: '1,5 мин' },
   { value: 120, label: '2 мин' },
-  { value: 180, label: '3 мин' },
   { value: 0, label: 'без таймера' },
 ];
 
