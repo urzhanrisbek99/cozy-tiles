@@ -3,7 +3,7 @@
 .confetti {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 40;
   width: 100%;
   height: 100%;
   pointer-events: none;
@@ -11,7 +11,40 @@
 
 .end-card {
   position: relative;
-  z-index: 1;
+}
+
+.end-hide {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 800;
+  transition: background 0.2s, color 0.2s;
+}
+
+.end-hide:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.result-chip {
+  position: fixed;
+  left: 50%;
+  top: 104px;
+  z-index: 41;
+  translate: -50% 0;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-deep) 70%, #000), 0 10px 22px rgba(60, 35, 55, 0.3);
+  animation: pop 0.25s ease;
 }
 
 /* phones */
@@ -161,9 +194,11 @@
 
   .actions {
     width: 100%;
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
     padding: 8px;
     gap: 6px;
-    grid-template-columns: auto auto 1fr 1.3fr auto;
   }
 
   .sort-row {
@@ -171,14 +206,26 @@
   }
 
   .reactions {
-    display: none;
+    flex: 1 1 150px;
+  }
+
+  .emoji {
+    width: 28px;
+    height: 28px;
   }
 
   .actions .primary,
   .actions .soft {
+    order: 1;
+    flex: 1 1 40%;
+    width: auto;
     padding: 11px 6px;
-    font-size: 14px;
+    font-size: 15px;
     white-space: nowrap;
+  }
+
+  .result-chip {
+    top: 150px;
   }
 
   .actions .small {

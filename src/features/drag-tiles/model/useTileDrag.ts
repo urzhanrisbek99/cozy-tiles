@@ -4,6 +4,7 @@ import type { Loc, Zone } from '@/entities/tile';
 const DRAG_SLOP = 6;
 const HOLD_FIRST_MS = 320;
 const HOLD_NEXT_MS = 190;
+const SNAP_MARGIN = 28;
 
 export interface DragState {
   ids: number[];
@@ -22,6 +23,7 @@ interface Gesture {
   at: Point;
   grab: Point;
   width: number;
+  height: number;
   started: boolean;
   timer: number;
 }
@@ -39,11 +41,36 @@ interface Options {
   onDrop: (ids: number[], from: Loc, to: Loc | null, released: Point[]) => void;
 }
 
-function locate(x: number, y: number): Loc | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-zone]');
-  if (!el) return null;
-  return { zone: el.dataset.zone as Zone, r: Number(el.dataset.r), c: Number(el.dataset.c) };
+const toLoc = (cell: HTMLElement): Loc => ({ zone: cell.dataset.zone as Zone, r: Number(cell.dataset.r), c: Number(cell.dataset.c) });
+
+function nearestCell(area: Element, x: number, y: number): Loc | null {
+  let best: HTMLElement | null = null;
+  let bestDist = Infinity;
+  area.querySelectorAll<HTMLElement>('[data-zone]').forEach((cell) => {
+    const rect = cell.getBoundingClientRect();
+    const dist = Math.hypot(rect.left + rect.width / 2 - x, rect.top + rect.height / 2 - y);
+    if (dist < bestDist) {
+      best = cell;
+      bestDist = dist;
+    }
+  });
+  return best ? toLoc(best) : null;
 }
+
+function locate(root: HTMLElement | null, x: number, y: number): Loc | null {
+  const hit = document.elementFromPoint(x, y);
+  const cell = hit?.closest<HTMLElement>('[data-zone]');
+  if (cell) return toLoc(cell);
+  for (const area of root?.querySelectorAll('.board, .rack') ?? []) {
+    const rect = area.getBoundingClientRect();
+    const inside =
+      x >= rect.left - SNAP_MARGIN && x <= rect.right + SNAP_MARGIN && y >= rect.top - SNAP_MARGIN && y <= rect.bottom + SNAP_MARGIN;
+    if (inside) return nearestCell(area, x, y);
+  }
+  return null;
+}
+
+const tileCentre = (g: Gesture, at: Point): Point => ({ x: at.x - g.grab.x + g.width / 2, y: at.y - g.grab.y + g.height / 2 });
 
 export function useTileDrag(options: Options) {
   const [picked, setPicked] = useState<number[]>([]);
@@ -97,7 +124,8 @@ export function useTileDrag(options: Options) {
     }
     placeGhost();
     latest.current.onMove(g.at);
-    highlight(locate(g.at.x, g.at.y), g.ids);
+    const centre = tileCentre(g, g.at);
+    highlight(locate(latest.current.root.current, centre.x, centre.y), g.ids);
   };
 
   const release = (e: PointerEvent) => {
@@ -115,7 +143,8 @@ export function useTileDrag(options: Options) {
       x: e.clientX - g.grab.x + i * (g.width + latest.current.gap),
       y: e.clientY - g.grab.y,
     }));
-    const to = e.type === 'pointercancel' ? null : locate(e.clientX, e.clientY);
+    const centre = tileCentre(g, { x: e.clientX, y: e.clientY });
+    const to = e.type === 'pointercancel' ? null : locate(latest.current.root.current, centre.x, centre.y);
     latest.current.onDrop(g.ids, g.from, to, released);
     setDrag(null);
   };
@@ -155,6 +184,7 @@ export function useTileDrag(options: Options) {
       at,
       grab: { x: e.clientX - rect.left, y: e.clientY - rect.top },
       width: rect.width,
+      height: rect.height,
       started: false,
       timer: window.setTimeout(() => handlers.current.extend(), HOLD_FIRST_MS),
     };
