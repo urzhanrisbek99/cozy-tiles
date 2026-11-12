@@ -11,10 +11,13 @@ import {
   type Grid,
   type Tile,
 } from '../shared/rules';
-import type { GameResult, Phase, RoomView } from '../shared/types';
+import type { ChatMessage, GameResult, Phase, RoomView } from '../shared/types';
 
 const OFFLINE_GRACE_MS = 30_000;
 const LOBBY_GRACE_MS = 20_000;
+const CHAT_MAX_LENGTH = 200;
+const CHAT_HISTORY = 80;
+const CHAT_MIN_GAP_MS = 400;
 
 export interface Player {
   id: string;
@@ -46,12 +49,39 @@ export class Room {
   result: GameResult | null = null;
   last = '';
   lastSeen = Date.now();
+  chat: ChatMessage[] = [];
+  private chatSeq = 0;
+  private lastSaid = new Map<string, number>();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     readonly code: string,
     private readonly publish: (room: Room) => void,
+    private readonly publishChat: (room: Room, message: ChatMessage) => void = () => {},
   ) {}
+
+  say(byId: string, raw: unknown) {
+    const player = this.find(byId);
+    if (!player || player.left) throw new RoomError('Ты не в комнате');
+    const text = typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX_LENGTH) : '';
+    if (!text) throw new RoomError('Пустое сообщение');
+    const now = Date.now();
+    if (now - (this.lastSaid.get(byId) ?? 0) < CHAT_MIN_GAP_MS) throw new RoomError('Не так быстро 🙂');
+    this.lastSaid.set(byId, now);
+    this.post({ playerId: player.id, name: player.name, avatar: player.avatar, text });
+  }
+
+  private post(message: Omit<ChatMessage, 'id' | 'at'>) {
+    const full: ChatMessage = { ...message, id: ++this.chatSeq, at: Date.now() };
+    this.chat.push(full);
+    if (this.chat.length > CHAT_HISTORY) this.chat.shift();
+    this.lastSeen = full.at;
+    this.publishChat(this, full);
+  }
+
+  private announce(text: string) {
+    this.post({ playerId: null, name: '', avatar: 0, text });
+  }
 
   get current(): Player | undefined {
     return this.phase === 'playing' ? this.players[this.turn] : undefined;
@@ -73,6 +103,7 @@ export class Room {
       if (this.players.length >= MAX_PLAYERS) throw new RoomError('Комната заполнена (максимум 5)');
       player = { id, name, avatar, socketId, left: false, offlineSince: null, rack: [], melded: false, score: 0 };
       this.players.push(player);
+      this.announce(`${name} заходит в комнату`);
     }
     if (this.phase === 'lobby') {
       player.name = name;
@@ -112,6 +143,7 @@ export class Room {
     this.reassignHost();
     if (this.phase === 'playing') {
       this.last = `${player.name} уходит из игры`;
+      this.announce(this.last);
       const alive = this.active;
       if (alive.length === 1) {
         this.finish(alive[0], 'alone');
@@ -248,7 +280,10 @@ export class Room {
   }
 
   private remove(id: string) {
+    const player = this.find(id);
+    if (!player) return;
     this.players = this.players.filter((p) => p.id !== id);
+    this.announce(`${player.name} выходит из комнаты`);
     this.reassignHost();
     this.touch();
   }

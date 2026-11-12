@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MAX_PLAYERS, type Grid } from '../shared/rules';
-import type { RoomView } from '../shared/types';
+import type { ChatMessage, RoomView } from '../shared/types';
 import { audio, type Mood } from './audio/engine';
 import { CAT_COATS, CatFace } from './Cats';
+import { Chat } from './Chat';
 import { Game } from './Game';
 import { call, socket } from './net';
 import { playerId, savedRoom, saveRoom, usePrefs, type Prefs } from './prefs';
@@ -33,8 +34,13 @@ export default function App() {
   const [connected, setConnected] = useState(socket.connected);
   const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
   const [rules, setRules] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+  const chatHidden = useRef(false);
+  chatHidden.current = !!view && view.phase !== 'lobby' && !chatOpen;
 
   const flash = useCallback((text: string) => {
     const key = Date.now();
@@ -61,8 +67,17 @@ export default function App() {
     };
     const onDraft = (draft: Grid) =>
       setView((v) => (v && v.phase === 'playing' && v.turnPlayerId !== v.you ? { ...v, draft } : v));
+    const onHistory = (history: ChatMessage[]) => setMessages(history);
+    const onChat = (message: ChatMessage) => {
+      setMessages((list) => (list.some((m) => m.id === message.id) ? list : [...list, message].slice(-80)));
+      if (message.playerId === null || message.playerId === PID) return;
+      audio.pop();
+      if (chatHidden.current) setUnread((n) => n + 1);
+    };
     socket.on('state', onState);
     socket.on('draft', onDraft);
+    socket.on('chat:history', onHistory);
+    socket.on('chat', onChat);
     let build: string | null = null;
     const onBuild = (next: string) => {
       if (build !== null && build !== next) window.location.reload();
@@ -75,6 +90,8 @@ export default function App() {
     return () => {
       socket.off('state', onState);
       socket.off('draft', onDraft);
+      socket.off('chat:history', onHistory);
+      socket.off('chat', onChat);
       socket.off('build', onBuild);
       socket.off('connect', rejoin);
       socket.off('disconnect', onDisconnect);
@@ -129,7 +146,24 @@ export default function App() {
     await call('room:leave');
     saveRoom(null);
     setView(null);
+    setMessages([]);
+    setChatOpen(false);
+    setUnread(0);
     window.history.replaceState(null, '', window.location.pathname);
+  };
+
+  const sendChat = useCallback(
+    async (text: string) => {
+      const ack = await call('chat:send', text);
+      if (!ack.ok) flash(ack.error ?? 'Сообщение не отправилось');
+      return ack.ok;
+    },
+    [flash],
+  );
+
+  const toggleChat = () => {
+    setChatOpen((open) => !open);
+    setUnread(0);
   };
 
   const inGame = view && view.phase !== 'lobby';
@@ -138,11 +172,23 @@ export default function App() {
     <>
       <Scene theme={prefs.theme} />
       <div className={`app ${inGame ? 'in-game' : ''}`}>
-        <Controls prefs={prefs} update={update} onRules={() => setRules(true)} onLeave={view ? leave : undefined} confirmLeave={view?.phase === 'playing'} />
+        <Controls
+          prefs={prefs}
+          update={update}
+          onRules={() => setRules(true)}
+          onLeave={view ? leave : undefined}
+          confirmLeave={view?.phase === 'playing'}
+          chat={inGame ? { open: chatOpen, unread, toggle: toggleChat } : undefined}
+        />
         {!view && <Home prefs={prefs} update={update} onCreate={() => enterRoom('room:create')} onJoin={(c) => enterRoom('room:join', c)} />}
-        {view?.phase === 'lobby' && <Lobby view={view} flash={flash} onLeave={leave} />}
+        {view?.phase === 'lobby' && <Lobby view={view} flash={flash} messages={messages} sendChat={sendChat} />}
         {inGame && <Game view={view} deadline={deadline} onLeave={leave} flash={flash} />}
       </div>
+      {inGame && chatOpen && (
+        <div className="chat-float">
+          <Chat messages={messages} you={view.you} send={sendChat} title="Чат" hint="Напиши что-нибудь друзьям — сообщение увидят все за столом" onClose={toggleChat} autoFocus />
+        </div>
+      )}
       {!connected && <div className="offline-banner">Связь потерялась… переподключаемся ☁️</div>}
       {toast && (
         <div className="toast" role="status" key={toast.key}>
@@ -160,12 +206,14 @@ function Controls({
   onRules,
   onLeave,
   confirmLeave,
+  chat,
 }: {
   prefs: Prefs;
   update: (p: Partial<Prefs>) => void;
   onRules: () => void;
   onLeave?: () => void;
   confirmLeave: boolean;
+  chat?: { open: boolean; unread: number; toggle: () => void };
 }) {
   return (
     <nav className="controls" aria-label="Настройки">
@@ -210,6 +258,12 @@ function Controls({
         </button>
       </div>
       <div className="pill">
+        {chat && (
+          <button className={`chat-toggle ${chat.open ? 'on' : ''}`} onClick={chat.toggle} title="Чат" aria-pressed={chat.open}>
+            💬
+            {chat.unread > 0 && <span className="badge">{chat.unread > 9 ? '9+' : chat.unread}</span>}
+          </button>
+        )}
         <button onClick={onRules} title="Правила">
           ?
         </button>
@@ -325,7 +379,18 @@ function Home({
   );
 }
 
-function Lobby({ view, flash, onLeave }: { view: RoomView; flash: (m: string) => void; onLeave: () => void }) {
+function Lobby({
+  view,
+  flash,
+  messages,
+  sendChat,
+}: {
+  view: RoomView;
+  flash: (m: string) => void;
+  messages: ChatMessage[];
+  sendChat: (text: string) => Promise<boolean>;
+}) {
+  const me = view.players.find((p) => p.id === view.you);
   const [turnSeconds, setTurnSeconds] = useState(view.turnSeconds);
   const isHost = view.hostId === view.you;
   const link = `${window.location.origin}/?room=${view.code}`;
@@ -341,7 +406,15 @@ function Lobby({ view, flash, onLeave }: { view: RoomView; flash: (m: string) =>
   };
 
   return (
-    <main className="card lobby">
+    <main className="lobby-wrap">
+     <section className="card lobby">
+      <div className="welcome">
+        <CatFace coat={me?.avatar ?? 0} awake className="welcome-cat" />
+        <div>
+          <h2>Добро пожаловать в лобби{me ? `, ${me.name}` : ''}!</h2>
+          <p className="muted">Позови друзей и поболтайте в чате, пока все собираются</p>
+        </div>
+      </div>
       <p className="muted">Код комнаты</p>
       <div className="room-code">{view.code}</div>
       <button className="soft small" onClick={copy}>
@@ -353,7 +426,7 @@ function Lobby({ view, flash, onLeave }: { view: RoomView; flash: (m: string) =>
           <li key={p.id} className={p.id === view.you ? 'me' : ''}>
             <CatFace coat={p.avatar} awake />
             <span>{p.name}</span>
-            {p.id === view.hostId && <em>хозяин</em>}
+            {p.id === view.hostId && <em title="Хозяин комнаты">👑</em>}
             {p.score !== 0 && <small>{p.score > 0 ? `+${p.score}` : p.score}</small>}
           </li>
         ))}
@@ -389,11 +462,16 @@ function Lobby({ view, flash, onLeave }: { view: RoomView; flash: (m: string) =>
           </button>
         </>
       ) : (
-        <p className="muted">Ждём, пока хозяин комнаты начнёт игру ☕</p>
+        <p className="muted">Ждём, пока хозяин комнаты 👑 начнёт игру ☕</p>
       )}
-      <button className="ghost small" onClick={onLeave}>
-        Выйти
-      </button>
+     </section>
+      <Chat
+        messages={messages}
+        you={view.you}
+        send={sendChat}
+        title="Чат лобби"
+        hint="Здесь можно общаться, пока все собираются. Поздоровайся первой кнопкой ниже!"
+      />
     </main>
   );
 }

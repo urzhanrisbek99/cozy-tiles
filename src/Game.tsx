@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { BOARD_COLS, BOARD_ROWS, INITIAL_MELD, gridIds, setValue, type Grid, type Tile } from '../shared/rules';
-import type { Reaction, RoomView } from '../shared/types';
+import type { ChatMessage, Reaction, RoomView } from '../shared/types';
 import { audio } from './audio/engine';
 import { CatFace, Mug, SleepyCat } from './Cats';
 import { RACK_COLS, arrange, continuesSet, dropOnBoard, fitRack, insertGroup, layoutRack, planDrop, type Cells, type SortMode } from './layout';
@@ -146,6 +146,7 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
   const [cw, setCw] = useState(40);
   const [rw, setRw] = useState(48);
   const [reactions, setReactions] = useState<(Reaction & { key: number })[]>([]);
+  const [says, setSays] = useState<ChatMessage[]>([]);
 
   const boardRef = useRef(board);
   const rackRef = useRef(rack);
@@ -259,9 +260,20 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
       }, 2400);
       timers.add(t);
     };
+    const onChat = (m: ChatMessage) => {
+      if (m.playerId === null) return;
+      setSays((list) => [...list.filter((x) => x.playerId !== m.playerId), m]);
+      const t = window.setTimeout(() => {
+        timers.delete(t);
+        setSays((list) => list.filter((x) => x.id !== m.id));
+      }, 5000);
+      timers.add(t);
+    };
     socket.on('reaction', onReaction);
+    socket.on('chat', onChat);
     return () => {
       socket.off('reaction', onReaction);
+      socket.off('chat', onChat);
       timers.forEach((t) => window.clearTimeout(t));
     };
   }, []);
@@ -649,6 +661,13 @@ export function Game({ view, deadline, onLeave, flash }: Props) {
                 .map((r) => (
                   <span key={r.key} className="reaction">
                     {r.emoji}
+                  </span>
+                ))}
+              {says
+                .filter((m) => m.playerId === p.id)
+                .map((m) => (
+                  <span key={m.id} className="say">
+                    {m.text.length > 70 ? `${m.text.slice(0, 70)}…` : m.text}
                   </span>
                 ))}
             </div>

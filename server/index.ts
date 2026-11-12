@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { Server, type Socket } from 'socket.io';
 import { Room, RoomError } from './room';
-import type { Ack } from '../shared/types';
+import type { Ack, ChatMessage } from '../shared/types';
 
 const PORT = Number(process.env.PORT) || 3001;
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -38,6 +38,12 @@ if (fs.existsSync(dist)) {
 function publish(room: Room) {
   for (const p of room.players) {
     if (p.socketId) io.to(p.socketId).emit('state', room.view(p.id));
+  }
+}
+
+function publishChat(room: Room, message: ChatMessage) {
+  for (const p of room.players) {
+    if (p.socketId) io.to(p.socketId).emit('chat', message);
   }
 }
 
@@ -88,6 +94,7 @@ function enter(socket: Socket, room: Room, who: Identity) {
   room.join(who.playerId, who.name, who.avatar, socket.id);
   socket.data.room = room;
   socket.data.playerId = who.playerId;
+  socket.emit('chat:history', room.chat);
 }
 
 io.on('connection', (socket) => {
@@ -104,7 +111,7 @@ io.on('connection', (socket) => {
     guard(reply, () => {
       const who = identity(raw);
       if (!who) throw new RoomError('Неверные данные');
-      const room = new Room(newCode(), publish);
+      const room = new Room(newCode(), publish, publishChat);
       rooms.set(room.code, room);
       enter(socket, room, who);
       return { ok: true, code: room.code };
@@ -167,6 +174,13 @@ io.on('connection', (socket) => {
     guard(reply, () => {
       const { room, playerId } = ctx();
       room.draw(playerId);
+    }),
+  );
+
+  socket.on('chat:send', (text, reply) =>
+    guard(reply, () => {
+      const { room, playerId } = ctx();
+      room.say(playerId, text);
     }),
   );
 

@@ -54,6 +54,15 @@ export interface Ack {
   code?: string;
 }
 
+export interface ChatMessage {
+  id: number;
+  playerId: string | null;
+  name: string;
+  avatar: number;
+  text: string;
+  at: number;
+}
+
 export interface Reaction {
   playerId: string;
   emoji: string;
