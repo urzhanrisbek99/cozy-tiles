@@ -1,0 +1,69 @@
+/* responsive */
+
+.home,
+.lobby {
+  scrollbar-width: thin;
+  overflow-x: hidden;
+}
+
+.lobby {
+  gap: 14px;
+}
+
+.seats li {
+  padding: 6px 12px;
+}
+
+.seats li svg,
+.seat-dot {
+  width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 1280px) {
+  .decor {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .players {
+    right: 12px;
+    top: 58px;
+  }
+  .app.in-game {
+    padding-top: 112px;
+  }
+  .shelf {
+    flex-direction: column;
+    align-items: center;
+  }
+  .actions {
+    width: min(100%, 560px);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
+  }
+  .sort-row,
+  .reactions {
+    grid-column: 1 / -1;
+  }
+  .turn-banner {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 520px) {
+  .pill input[type='range'] {
+    display: none;
+  }
+  .card {
+    padding: 20px;
+  }
+  .cats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .room-code {
+    font-size: 42px;
+  }
+}

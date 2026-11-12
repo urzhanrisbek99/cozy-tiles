@@ -1,17 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import {
   MAX_PLAYERS,
   MIN_PLAYERS,
   RACK_START,
   createTiles,
   emptyGrid,
+  gridIds,
   rackValue,
   sanitizeGrid,
   shuffle,
   validateTurn,
   type Grid,
   type Tile,
-} from '../shared/rules';
-import type { ChatMessage, GameResult, Phase, RoomView } from '../shared/types';
+} from '../core/rules';
+import type { ChatMessage, GameResult, Phase, RoomView } from '../core/types';
 
 const OFFLINE_GRACE_MS = 30_000;
 const LOBBY_GRACE_MS = 20_000;
@@ -21,6 +23,7 @@ const CHAT_MIN_GAP_MS = 400;
 
 export interface Player {
   id: string;
+  key: string;
   name: string;
   avatar: number;
   socketId: string | null;
@@ -95,13 +98,13 @@ export class Room {
     return this.players.find((p) => p.id === id);
   }
 
-  join(id: string, name: string, avatar: number, socketId: string) {
-    let player = this.find(id);
+  join(key: string, name: string, avatar: number, socketId: string): Player {
+    let player = this.players.find((p) => p.key === key);
     if (player && player.left) throw new RoomError('Ты уже покинул(а) эту партию — дождись следующей');
     if (!player) {
       if (this.phase !== 'lobby') throw new RoomError('Игра уже идёт — дождись следующей партии');
       if (this.players.length >= MAX_PLAYERS) throw new RoomError('Комната заполнена (максимум 5)');
-      player = { id, name, avatar, socketId, left: false, offlineSince: null, rack: [], melded: false, score: 0 };
+      player = { id: randomUUID().slice(0, 8), key, name, avatar, socketId, left: false, offlineSince: null, rack: [], melded: false, score: 0 };
       this.players.push(player);
       this.announce(`${name} заходит в комнату`);
     }
@@ -113,6 +116,7 @@ export class Room {
     player.offlineSince = null;
     if (!this.hostId || !this.find(this.hostId)) this.hostId = player.id;
     this.touch();
+    return player;
   }
 
   disconnect(socketId: string) {
@@ -181,10 +185,19 @@ export class Room {
   setDraft(byId: string, raw: unknown): Grid | null {
     if (this.current?.id !== byId) return null;
     const grid = sanitizeGrid(raw, this.tiles.length);
-    if (!grid) return null;
+    if (!grid || !this.isPlausibleDraft(grid, this.current)) return null;
     this.draft = grid;
     this.lastSeen = Date.now();
     return grid;
+  }
+
+  private isPlausibleDraft(grid: Grid, player: Player) {
+    const ids = gridIds(grid);
+    const placed = new Set(ids);
+    if (placed.size !== ids.length) return false;
+    const table = gridIds(this.board);
+    const allowed = new Set([...table, ...player.rack]);
+    return ids.every((id) => allowed.has(id)) && table.every((id) => placed.has(id));
   }
 
   endTurn(byId: string, raw: unknown) {

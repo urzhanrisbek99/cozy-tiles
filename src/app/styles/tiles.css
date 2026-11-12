@@ -1,0 +1,125 @@
+/* tiles */
+
+.tile {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: calc(var(--cw) * 0.18);
+  background: linear-gradient(180deg, var(--tile-1), var(--tile-2));
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 var(--tile-edge), 0 3px 6px rgba(80, 50, 30, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--cw) * 0.02);
+  touch-action: none;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, opacity 0.15s ease;
+}
+
+.tile.grab {
+  cursor: grab;
+}
+
+.tile.grab:hover {
+  transform: translateY(-2px);
+}
+
+.tile .num {
+  font-weight: 900;
+  font-size: calc(var(--cw) * 0.56);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.tile .glyph {
+  width: calc(var(--cw) * 0.3);
+  height: calc(var(--cw) * 0.3);
+}
+
+.c0 {
+  color: var(--c0);
+}
+.c1 {
+  color: var(--c1);
+}
+.c2 {
+  color: var(--c2);
+}
+.c3 {
+  color: var(--c3);
+}
+
+.tile.joker {
+  background: linear-gradient(180deg, #fff4f7, #f8dde6);
+}
+
+.joker-face {
+  width: 82%;
+  height: 82%;
+}
+
+.tile.new {
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 var(--tile-edge), 0 0 0 2px color-mix(in srgb, var(--accent) 75%, transparent),
+    0 3px 6px rgba(80, 50, 30, 0.18);
+}
+
+.tile.picked,
+.tile.picked:hover {
+  z-index: 3;
+  transform: translateY(-8px) scale(1.06);
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 var(--tile-edge), 0 0 0 3px var(--accent), 0 12px 16px rgba(60, 30, 40, 0.3);
+}
+
+.tile.bad {
+  background: linear-gradient(180deg, #fff1f1, #fbd9d9);
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 #e6a9a9, 0 0 0 2px #e06c6c;
+  animation: wiggle 0.4s ease 2;
+}
+
+.tile.fresh {
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 var(--tile-edge), 0 0 0 3px #ffbe4a, 0 0 18px 5px rgba(255, 190, 74, 0.75);
+}
+
+.tile.fresh::after {
+  content: 'новая';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 5px);
+  translate: -50% 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #ffbe4a;
+  color: #5a3a08;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.4;
+  white-space: nowrap;
+  animation: bob 1.6s ease-in-out infinite;
+}
+
+.tile.ghosted {
+  opacity: 0.2;
+}
+
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  gap: var(--gap);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ghost-slot {
+  position: relative;
+  flex: none;
+  width: var(--cw);
+  height: calc(var(--cw) * 1.3);
+  animation: lift 0.16s ease forwards;
+}
+
+.ghost-slot .tile {
+  box-shadow: 0 calc(var(--cw) * 0.06) 0 var(--tile-edge), 0 14px 20px rgba(60, 30, 40, 0.32);
+}

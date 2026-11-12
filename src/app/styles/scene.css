@@ -1,0 +1,100 @@
+/* scene */
+
+.scene {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--sky-3) 100%);
+  transition: background 1.2s ease;
+}
+
+.clouds {
+  position: absolute;
+  inset: 0 0 40% 0;
+  background:
+    radial-gradient(ellipse 40% 18% at 20% 25%, rgba(255, 255, 255, 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 20% at 70% 18%, rgba(255, 255, 255, 0.14), transparent 70%),
+    radial-gradient(ellipse 35% 14% at 50% 40%, rgba(255, 255, 255, 0.12), transparent 70%);
+  animation: drift 60s linear infinite alternate;
+}
+
+.moon {
+  position: absolute;
+  top: 9%;
+  right: 16%;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  box-shadow: inset -24px 10px 0 0 #ffe9b8;
+  filter: drop-shadow(0 0 22px rgba(255, 233, 184, 0.55));
+}
+
+.sun {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 180px;
+  height: 180px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff1d6 0%, rgba(255, 216, 170, 0.6) 40%, transparent 70%);
+}
+
+.land {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 62%;
+  transition: opacity 0.8s;
+}
+
+.land .lit {
+}
+
+.particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+}
+
+.bulb {
+  fill: #ffe3a1;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.branch {
+  position: absolute;
+  top: -10px;
+  right: -20px;
+  width: min(46vw, 520px);
+}
+
+.lamp-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 4% 92%, var(--glow), transparent 38%), radial-gradient(circle at 96% 96%, var(--glow), transparent 30%);
+  pointer-events: none;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 160px rgba(30, 15, 30, 0.35);
+  pointer-events: none;
+}

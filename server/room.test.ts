@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyGrid } from '../shared/rules';
+import { emptyGrid } from '../core/rules';
 import { Room } from './room';
 
 function startedRoom() {
   const room = new Room('TEST', () => {});
-  room.join('player-a', 'A', 0, 'socket-a');
-  room.join('player-b', 'B', 1, 'socket-b');
-  room.start('player-a', 0);
+  const host = room.join('secret-key-a', 'A', 0, 'socket-a');
+  room.join('secret-key-b', 'B', 1, 'socket-b');
+  room.start(host.id, 0);
   const player = room.current!;
   player.rack = [9, 10, 11, 0];
   return { room, player };

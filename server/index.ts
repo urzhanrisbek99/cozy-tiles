@@ -5,16 +5,19 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { Server, type Socket } from 'socket.io';
 import { Room, RoomError } from './room';
-import type { Ack, ChatMessage } from '../shared/types';
+import type { Ack, ChatMessage } from '../core/types';
 
 const PORT = Number(process.env.PORT) || 3001;
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ';
 const REACTIONS = new Set(['🐾', '❤️', '😹', '☕', '👏', '😴']);
 const ROOM_TTL_MS = 30 * 60_000;
+const MAX_ROOMS = 500;
+const EVENTS_PER_SECOND = 20;
+const EVENT_BURST = 40;
 
 const app = express();
 const http = createServer(app);
-const io = new Server(http, { cors: { origin: true } });
+const io = new Server(http, { cors: { origin: true }, maxHttpBufferSize: 32_000 });
 const rooms = new Map<string, Room>();
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
@@ -91,14 +94,25 @@ function guard(reply: unknown, fn: () => Ack | void) {
 function enter(socket: Socket, room: Room, who: Identity) {
   const prev = socket.data.room as Room | undefined;
   if (prev && prev !== room) prev.disconnect(socket.id);
-  room.join(who.playerId, who.name, who.avatar, socket.id);
+  const player = room.join(who.playerId, who.name, who.avatar, socket.id);
   socket.data.room = room;
-  socket.data.playerId = who.playerId;
+  socket.data.playerId = player.id;
   socket.emit('chat:history', room.chat);
 }
 
 io.on('connection', (socket) => {
   socket.emit('build', buildId());
+
+  let budget = EVENT_BURST;
+  let refilledAt = Date.now();
+  socket.use((_packet, next) => {
+    const now = Date.now();
+    budget = Math.min(EVENT_BURST, budget + ((now - refilledAt) / 1000) * EVENTS_PER_SECOND);
+    refilledAt = now;
+    if (budget < 1) return;
+    budget--;
+    next();
+  });
 
   const ctx = () => {
     const room = socket.data.room as Room | undefined;
@@ -111,6 +125,7 @@ io.on('connection', (socket) => {
     guard(reply, () => {
       const who = identity(raw);
       if (!who) throw new RoomError('Неверные данные');
+      if (rooms.size >= MAX_ROOMS) throw new RoomError('Сейчас слишком много комнат — попробуй чуть позже');
       const room = new Room(newCode(), publish, publishChat);
       rooms.set(room.code, room);
       enter(socket, room, who);
