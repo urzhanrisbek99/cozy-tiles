@@ -22,6 +22,7 @@ import { call, socket } from '@/shared/api/socket';
 import { audio } from '@/shared/lib/audio/engine';
 import { prefersReducedMotion } from '@/shared/lib/motion';
 import { Mug, SleepyCat } from '@/shared/ui/illustrations';
+import { ScrollHint } from '@/shared/ui/ScrollHint';
 import { GameResult } from '@/widgets/game-result';
 import { PlayersBar } from '@/widgets/players-bar';
 import { TurnActions } from '@/widgets/turn-actions';
@@ -304,6 +305,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
           )}
         </div>
       </div>
+      <ScrollHint target={boardAreaRef} className="for-board" />
 
       <footer className="shelf">
         <div className="decor">
@@ -322,6 +324,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
             />
           ))}
         </div>
+        <ScrollHint target={rackAreaRef} className="for-rack" />
         <TurnActions
           canAct={myTurn && !busy}
           canFinish={analysis.placed > 0}
@@ -359,8 +362,6 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
           Твой ход ✨
         </div>
       )}
-
-      <div className="rotate-hint">Поверни телефон вертикально 📱</div>
 
       {view.phase === 'ended' && view.result && <GameResult view={view} onLeave={onLeave} flash={flash} />}
     </div>

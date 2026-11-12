@@ -10,12 +10,17 @@ const SIDE_ACTIONS = 250;
 const PHONE_WIDTH = 520;
 const PHONE_BOARD_COLS = 10;
 const PHONE_RACK_COLS = 8.5;
+const SHORT_HEIGHT = 500;
+const SHORT_BOARD_COLS = 18;
+const SHORT_RACK_TILE = 34;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.floor(value)));
 const isPhone = () => window.innerWidth <= PHONE_WIDTH;
+const isShortLandscape = () => window.innerHeight <= SHORT_HEIGHT && window.innerWidth > window.innerHeight;
 
 function rackTile() {
   const width = window.innerWidth;
+  if (isShortLandscape()) return SHORT_RACK_TILE;
   if (isPhone()) return clamp((width - 40 - TILE_GAP * 8) / PHONE_RACK_COLS, 32, 46);
   const side = (width > 1280 ? SIDE_DECOR : 0) + (width > 900 ? SIDE_ACTIONS : 0);
   return clamp((width - side - 48 - TILE_GAP * (RACK_COLS - 1)) / RACK_COLS, 30, 50);
@@ -23,10 +28,11 @@ function rackTile() {
 
 function boardTile(area: HTMLElement) {
   const { width, height } = area.getBoundingClientRect();
-  const cols = isPhone() ? PHONE_BOARD_COLS : BOARD_COLS;
+  const small = isPhone() || isShortLandscape();
+  const cols = isShortLandscape() ? SHORT_BOARD_COLS : isPhone() ? PHONE_BOARD_COLS : BOARD_COLS;
   const byWidth = (width - BOARD_PADDING - TILE_GAP * (cols - 1)) / cols;
   const byHeight = (height - BOARD_PADDING - TILE_GAP * (BOARD_ROWS - 1)) / BOARD_ROWS / TILE_RATIO;
-  return clamp(Math.min(byWidth, byHeight), isPhone() ? 20 : 16, 52);
+  return clamp(Math.min(byWidth, byHeight), small ? 20 : 16, 52);
 }
 
 export function useTileSizes(boardArea: RefObject<HTMLElement | null>) {

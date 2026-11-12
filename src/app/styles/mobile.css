@@ -71,10 +71,6 @@
   box-shadow: 0 0 0 2px #fff;
 }
 
-.rotate-hint {
-  display: none;
-}
-
 @media (max-width: 520px) {
   .controls {
     top: 8px;
@@ -264,23 +260,6 @@
   }
 }
 
-@media (max-height: 480px) and (orientation: landscape) and (pointer: coarse) {
-  .rotate-hint {
-    position: fixed;
-    inset: 0;
-    z-index: 80;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: var(--sky-1);
-    color: #fff;
-    font-family: 'Comfortaa', 'Nunito', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    text-align: center;
-  }
-}
-
 @media (max-width: 900px) {
   .leave {
     width: auto;
@@ -294,5 +273,210 @@
 
   .actions .reset {
     font-size: 18px;
+  }
+}
+
+/* scroll hint */
+
+.scroll-hint {
+  position: relative;
+  flex: none;
+  height: 5px;
+  margin: 0 32px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-hint span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* short landscape screens */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .controls {
+    top: 6px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .pill.themes button:not(.on),
+  .pill input[type='range'],
+  .leave span,
+  .decor,
+  .chip-text,
+  .status-line .last {
+    display: none;
+  }
+
+  .pill button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .leave {
+    width: auto;
+    height: 40px;
+    padding: 0 12px;
+  }
+
+  .app {
+    padding: 52px 8px 8px;
+  }
+
+  .app:not(.in-game) {
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+
+  .app.in-game {
+    padding: 52px 8px 6px;
+  }
+
+  .players {
+    top: 6px;
+    left: 8px;
+    right: auto;
+    gap: 6px;
+  }
+
+  .chip {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 2px;
+  }
+
+  .chip-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .chip-count {
+    display: grid;
+  }
+
+  .pool {
+    padding: 0 10px;
+  }
+
+  .status-line {
+    position: fixed;
+    top: 9px;
+    left: 50%;
+    z-index: 6;
+    translate: -50% 0;
+    min-height: 30px;
+    padding: 2px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .game {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 172px;
+    grid-template-rows: minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      'board actions'
+      'bhint actions'
+      'rack actions'
+      'rhint actions';
+    gap: 5px 8px;
+  }
+
+  .shelf {
+    display: contents;
+  }
+
+  .board-wrap {
+    grid-area: board;
+    place-items: start;
+    overflow: auto;
+    scrollbar-width: none;
+    border-radius: var(--radius);
+  }
+
+  .board {
+    padding: 10px;
+  }
+
+  .scroll-hint.for-board {
+    grid-area: bhint;
+  }
+
+  .rack {
+    grid-area: rack;
+    grid-template-columns: repeat(32, var(--cw));
+    max-width: 100%;
+    padding: 6px 10px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .scroll-hint.for-rack {
+    grid-area: rhint;
+  }
+
+  .rack .tile.fresh::after {
+    content: '';
+    top: 3px;
+    right: 3px;
+    bottom: auto;
+    left: auto;
+    translate: none;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    box-shadow: 0 0 0 2px #fff;
+  }
+
+  .actions {
+    grid-area: actions;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-self: stretch;
+    width: auto;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .actions .primary,
+  .actions .soft {
+    padding: 9px 6px;
+    font-size: 14px;
+  }
+
+  .emoji {
+    width: 24px;
+    height: 24px;
+    font-size: 15px;
+  }
+
+  .chat-float {
+    top: 50px;
+    right: auto;
+    left: 8px;
+    width: 320px;
+    height: calc(100% - 58px);
+  }
+
+  .turn-banner {
+    top: 30%;
+    padding: 8px 24px;
+    font-size: 20px;
+  }
+
+  .countdown {
+    top: 20%;
+    font-size: 84px;
+  }
+
+  .result-chip {
+    top: 52px;
   }
 }

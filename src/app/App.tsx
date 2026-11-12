@@ -61,14 +61,24 @@ export function App() {
       return;
     }
     if (audio.isPlaying) return;
-    const unlock = () => audio.start();
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
+    const events = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
+    const unlock = () => {
+      audio.start();
+      events.forEach((name) => window.removeEventListener(name, unlock));
     };
+    events.forEach((name) => window.addEventListener(name, unlock));
+    return () => events.forEach((name) => window.removeEventListener(name, unlock));
   }, [prefs.music]);
+
+  useEffect(() => {
+    const wake = () => document.visibilityState === 'visible' && audio.wake();
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('pointerup', wake);
+    return () => {
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('pointerup', wake);
+    };
+  }, []);
 
   const toggleChat = () => {
     setChatOpen((open) => !open);

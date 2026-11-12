@@ -4,7 +4,7 @@
   "description": "Cozy tile game to play with friends",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#2b2350",
   "theme_color": "#8566c2",
   "icons": [

@@ -1,3 +1,5 @@
+import { playThroughSilentSwitch } from './silentMode';
+
 export type Mood = 'rain' | 'night' | 'autumn' | 'sakura';
 
 interface Chord {
@@ -64,6 +66,7 @@ export class CozyAudio {
   start() {
     const ctx = this.ensure();
     if (!ctx) return;
+    playThroughSilentSwitch();
     void ctx.resume();
     if (this.stopTimer !== null) {
       clearTimeout(this.stopTimer);
@@ -204,8 +207,15 @@ export class CozyAudio {
     if (!this.sfxEnabled) return null;
     const ctx = this.ensure();
     if (!ctx) return null;
-    if (ctx.state !== 'running') void ctx.resume();
+    if (ctx.state !== 'running') {
+      playThroughSilentSwitch();
+      void ctx.resume();
+    }
     return ctx;
+  }
+
+  wake() {
+    if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume();
   }
 
   private ensure(): AudioContext | null {
