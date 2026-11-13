@@ -54,6 +54,6 @@ src/       клиент, слои по Feature-Sliced Design
 
 ## Музыка
 
-Треки в `public/music` — из сборника «Happy Lo-Fi (Lofi Collection)» автора HoliznaCC0,
+Треки в `public/music` — из сборника «Lo-Fi and Chill (Collection)» автора HoliznaCC0,
 опубликованного на OpenGameArt под лицензией CC0 (общественное достояние):
-https://opengameart.org/content/happy-lo-fi-lofi-collection
+https://opengameart.org/content/lo-fi-and-chill-collection

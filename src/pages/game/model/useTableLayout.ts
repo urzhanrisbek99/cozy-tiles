@@ -11,9 +11,10 @@ const SHORT_HEIGHT = 500;
 const SIDE_DECOR = 380;
 const SIDE_ACTIONS = 250;
 const RACK_PADDING = 20;
-const PHONE_PADDING = 16;
+const PHONE_PADDING = { portrait: 16, landscape: 12 };
+const RACK_ROWS = 2;
+const RACK_TILE = { portrait: 40, landscape: 28 };
 const PHONE_TILE = 40;
-const WIDE_RACK = 20;
 
 export type Screen = 'desktop' | 'portrait' | 'landscape';
 
@@ -37,6 +38,7 @@ export interface TableLayout {
   rows: number;
   rackCols: number;
   rackCells: number;
+  rackHeight: number | null;
   tiny: boolean;
 }
 
@@ -46,7 +48,6 @@ interface Size {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.floor(value)));
-const roundUp = (value: number, step: number, min: number, max: number) => Math.min(max, Math.max(min, Math.ceil(value / step) * step));
 const viewport = (): Size => ({ width: window.innerWidth, height: window.innerHeight });
 
 function screenOf({ width, height }: Size): Screen {
@@ -83,6 +84,20 @@ function fitTile(area: Size, cols: number, rows: number, padding: number, min: n
   return tile < TINY_TILE ? { tile: fit(TIGHT_GAP), gap: TIGHT_GAP } : { tile, gap: GAP };
 }
 
+function packRack(width: number, cells: number, firstCols: number, largest: number) {
+  const fit = (cols: number, rows: number, height: number) =>
+    Math.min((width - GAP * (cols - 1)) / cols, (height - GAP * (rows - 1)) / rows / TILE_RATIO);
+  const base = clamp(fit(firstCols, 1, Infinity), 20, largest);
+  const height = RACK_ROWS * base * TILE_RATIO + GAP * (RACK_ROWS - 1) + 1;
+  let best = { cols: firstCols, rows: RACK_ROWS, tile: 0, height };
+  for (let cols = firstCols; cols <= firstCols * 3; cols++) {
+    const rows = Math.max(RACK_ROWS, Math.ceil(cells / cols));
+    const tile = clamp(fit(cols, rows, height), 10, largest);
+    if (tile > best.tile) best = { cols, rows, tile, height };
+  }
+  return best;
+}
+
 function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown: TableLayout | null): TableLayout {
   if (screen === 'desktop') {
     const side = (window.width > 1280 ? SIDE_DECOR : 0) + (window.width > 900 ? SIDE_ACTIONS : 0);
@@ -98,6 +113,7 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown
       rows: BOARD_ROWS,
       rackCols: RACK_COLS,
       rackCells: usage.rackLength,
+      rackHeight: null,
       tiny: false,
     };
   }
@@ -105,22 +121,23 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown
   const portrait = screen === 'portrait';
   const needCols = usedSpan(usage.firstCol, usage.lastCol, portrait ? 9 : 12, BOARD_COLS, shown?.col0);
   const needRows = usedSpan(usage.firstRow, usage.lastRow, portrait ? 4 : 3, BOARD_ROWS, shown?.row0);
-  const { tile, gap } = fitTile(area, needCols.size, needRows.size, PHONE_PADDING, 8, PHONE_TILE);
-  const cols = widen(needCols, Math.floor((area.width - PHONE_PADDING + gap) / (tile + gap)), BOARD_COLS, shown?.col0);
-  const rows = widen(needRows, Math.floor((area.height - PHONE_PADDING + gap) / (tile * TILE_RATIO + gap)), BOARD_ROWS, shown?.row0);
-  const oneMoreRow = usage.rackLast >= RACK_COLS && usage.rackLast < WIDE_RACK - 1;
-  const rackCols = portrait ? 9 : oneMoreRow ? WIDE_RACK : RACK_COLS;
+  const padding = PHONE_PADDING[screen];
+  const { tile, gap } = fitTile(area, needCols.size, needRows.size, padding, 8, PHONE_TILE);
+  const cols = widen(needCols, Math.floor((area.width - padding + gap) / (tile + gap)), BOARD_COLS, shown?.col0);
+  const rows = widen(needRows, Math.floor((area.height - padding + gap) / (tile * TILE_RATIO + gap)), BOARD_ROWS, shown?.row0);
+  const rack = packRack(area.width - RACK_PADDING, usage.rackLast + 2, portrait ? 9 : 12, RACK_TILE[screen]);
   return {
     screen,
     tile,
     gap,
-    rackTile: clamp((area.width - RACK_PADDING - GAP * (rackCols - 1)) / rackCols, 22, 44),
+    rackTile: rack.tile,
     col0: cols.start,
     row0: rows.start,
     cols: cols.size,
     rows: rows.size,
-    rackCols,
-    rackCells: Math.min(usage.rackLength, roundUp(usage.rackLast + 2, rackCols, portrait ? rackCols * 2 : rackCols, Infinity)),
+    rackCols: rack.cols,
+    rackCells: Math.min(usage.rackLength, rack.cols * rack.rows),
+    rackHeight: rack.height,
     tiny: tile < TINY_TILE,
   };
 }

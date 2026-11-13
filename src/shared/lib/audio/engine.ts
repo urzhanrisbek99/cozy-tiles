@@ -1,6 +1,6 @@
 import { playThroughSilentSwitch } from './silentMode';
 
-const TRACKS = ['/music/poor-but-happy.mp3', '/music/happy-but-a-little-off.mp3', '/music/puppy-love.mp3', '/music/new-shoes.mp3'];
+const TRACKS = ['morning-coffee', 'glad-to-be-stuck-inside', 'first-snow', 'a-little-shade', 'ramen'].map((name) => `/music/${name}.mp3`);
 const FADE_IN_S = 0.8;
 const FADE_OUT_MS = 500;
 const SFX_LEVEL = 0.6;

@@ -164,7 +164,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     },
   });
 
-  const motion = useTileMotion(rootRef, `${layout.tile}:${layout.rackTile}:${layout.col0}:${layout.row0}:${layout.cols}:${layout.rows}:${layout.rackCells}`, [board, rack, drag.drag]);
+  const motion = useTileMotion(rootRef, `${layout.tile}:${layout.rackTile}:${layout.rackCols}:${layout.col0}:${layout.row0}:${layout.cols}:${layout.rows}:${layout.rackCells}`, [board, rack, drag.drag]);
 
   useEffect(() => {
     const key = myTurn ? `mine:${view.turnId}` : 'other';
@@ -278,6 +278,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     '--gap': `${layout.gap}px`,
     '--cols': layout.cols,
     '--rack-cols': layout.rackCols,
+    '--rack-h': layout.rackHeight === null ? undefined : `${layout.rackHeight}px`,
   } as CSSProperties;
   const ended = view.phase === 'ended' && view.result !== null;
   const turnPlayer = view.players.find((p) => p.id === view.turnPlayerId);

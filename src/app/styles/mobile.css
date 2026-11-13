@@ -69,6 +69,40 @@
   display: none;
 }
 
+.rotate-hint {
+  display: none;
+}
+
+@media (display-mode: standalone) and (orientation: portrait) and (max-width: 600px) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--sky-1);
+    text-align: center;
+  }
+
+  .rotate-hint span {
+    display: inline-block;
+    font-size: 54px;
+    animation: rotate-phone 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes rotate-phone {
+  0%,
+  25% {
+    rotate: 0deg;
+  }
+  60%,
+  100% {
+    rotate: -90deg;
+  }
+}
+
 /* compact player chips */
 
 #root {
@@ -222,7 +256,9 @@
   }
 
   .rack {
-    justify-content: center;
+    box-sizing: content-box;
+    height: var(--rack-h);
+    place-content: center;
     padding: 8px 10px 12px;
   }
 
@@ -324,10 +360,45 @@
   }
 
   :root:has(.game) .controls {
+    top: 4px;
     right: max(8px, env(safe-area-inset-right));
-    width: 172px;
-    flex-wrap: wrap;
-    justify-content: center;
+    width: 196px;
+    height: 36px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    box-shadow: 0 4px 14px rgba(60, 35, 55, 0.16);
+  }
+
+  :root:has(.game) .pill {
+    gap: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+
+  :root:has(.game) .pill button {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  :root:has(.game) .leave {
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+
+  :root:has(.game) .leave.armed {
+    background: #e25c73;
   }
 
   .pill.themes button:not(.on),
@@ -361,7 +432,15 @@
   }
 
   .app.in-game {
-    padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    padding: 4px max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  }
+
+  .game::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--felt);
   }
 
   .players {
@@ -370,6 +449,11 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
+  }
+
+  .players,
+  .actions {
+    margin-bottom: max(6px, env(safe-area-inset-bottom));
   }
 
   .reaction {
@@ -409,8 +493,10 @@
   .status-line {
     grid-area: status;
     align-self: stretch;
-    margin-top: 88px;
+    margin-top: 42px;
     min-height: 0;
+    max-height: 48px;
+    overflow: hidden;
     padding: 4px 8px;
     gap: 2px 6px;
     border-radius: 14px;
@@ -419,7 +505,7 @@
 
   .game {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 172px;
+    grid-template-columns: 44px minmax(0, 1fr) 196px;
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
       'side board status'
@@ -438,15 +524,22 @@
     min-width: 0;
   }
 
-  .board {
-    padding: 6px;
+  .board,
+  .board.active {
+    padding: 4px;
     place-content: center;
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
   }
 
   .rack {
     grid-area: rack;
-    justify-content: center;
-    padding: 6px 10px 10px;
+    box-sizing: content-box;
+    height: var(--rack-h);
+    place-content: center;
+    padding: 6px 10px max(10px, env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0;
   }
 
   .rack .tile.fresh::after {
