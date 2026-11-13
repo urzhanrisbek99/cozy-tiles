@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { Mood } from './audio/engine';
+import type { Mood } from '@/shared/config/themes';
 
 export interface Prefs {
   name: string;

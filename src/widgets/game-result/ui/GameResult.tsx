@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { GameResult as Result, RoomView } from '@core/types';
 import { CatFace } from '@/entities/player';
 import { call } from '@/shared/api/socket';
@@ -13,16 +13,17 @@ const REASONS: Record<Result['reason'], string> = {
 
 interface Props {
   view: RoomView;
+  hidden: boolean;
+  onHide: () => void;
   onLeave: () => void;
   flash: (message: string) => void;
 }
 
-export function GameResult({ view, onLeave, flash }: Props) {
+export function GameResult({ view, hidden, onHide, onLeave, flash }: Props) {
   const result = view.result!;
   const winner = result.ranks[0];
   const isHost = view.hostId === view.you;
   const won = winner.id === view.you;
-  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     audio.celebrate(won);
@@ -36,14 +37,10 @@ export function GameResult({ view, onLeave, flash }: Props) {
   return (
     <>
       <Confetti />
-      {hidden ? (
-        <button className="result-chip" onClick={() => setHidden(false)}>
-          🏆 Показать результаты
-        </button>
-      ) : (
+      {!hidden && (
         <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="end-title">
           <div className="card end-card">
-            <button className="end-hide" onClick={() => setHidden(true)} title="Скрыть и посмотреть на стол">
+            <button className="end-hide" onClick={onHide} title="Скрыть и посмотреть на стол">
               Скрыть
             </button>
             <CatFace coat={winner.avatar} awake className="end-cat" />

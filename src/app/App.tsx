@@ -7,7 +7,7 @@ import { LobbyPage } from '@/pages/lobby';
 import { THEMES } from '@/shared/config/themes';
 import { audio } from '@/shared/lib/audio/engine';
 import { usePrefs } from '@/shared/lib/prefs';
-import { Chat } from '@/widgets/chat';
+import { FloatingChat } from '@/widgets/chat';
 import { Controls } from '@/widgets/controls';
 import { RulesDialog } from '@/widgets/rules-dialog';
 import { Scene } from '@/widgets/scene';
@@ -47,7 +47,6 @@ export function App() {
     document.documentElement.dataset.theme = prefs.theme;
     const color = THEMES.find((t) => t.id === prefs.theme)?.color ?? THEMES[0].color;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
-    audio.setMood(prefs.theme);
   }, [prefs.theme]);
 
   useEffect(() => {
@@ -108,19 +107,7 @@ export function App() {
         {inGame && <GamePage view={view} deadline={room.deadline} onLeave={leave} flash={flash} />}
       </div>
 
-      {inGame && chatOpen && (
-        <div className="chat-float">
-          <Chat
-            messages={room.messages}
-            you={view.you}
-            send={room.sendChat}
-            title="Чат"
-            hint="Напиши что-нибудь друзьям — сообщение увидят все за столом"
-            onClose={toggleChat}
-            autoFocus
-          />
-        </div>
-      )}
+      {inGame && chatOpen && <FloatingChat messages={room.messages} you={view.you} send={room.sendChat} onClose={toggleChat} />}
       {!room.connected && <div className="offline-banner">Связь потерялась… переподключаемся ☁️</div>}
       {toast && (
         <div className="toast" role="status" key={toast.key}>

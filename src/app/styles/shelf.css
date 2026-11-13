@@ -10,7 +10,7 @@
 .rack {
   --cw: var(--rw);
   display: grid;
-  grid-template-columns: repeat(16, var(--cw));
+  grid-template-columns: repeat(var(--rack-cols, 16), var(--cw));
   grid-auto-rows: calc(var(--cw) * 1.3);
   gap: var(--gap);
   padding: 10px 12px 14px;

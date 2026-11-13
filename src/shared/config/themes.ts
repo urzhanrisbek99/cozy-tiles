@@ -1,4 +1,4 @@
-import type { Mood } from '@/shared/lib/audio/engine';
+export type Mood = 'rain' | 'night' | 'autumn' | 'sakura';
 
 export interface Theme {
   id: Mood;

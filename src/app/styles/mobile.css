@@ -1,4 +1,4 @@
-/* celebration */
+/* game result */
 
 .confetti {
   position: fixed;
@@ -32,22 +32,40 @@
 }
 
 .result-chip {
-  position: fixed;
-  left: 50%;
-  top: 104px;
-  z-index: 41;
-  translate: -50% 0;
-  padding: 9px 20px;
+  padding: 3px 12px;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--accent), var(--accent-deep));
   color: #fff;
+  font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
-  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-deep) 70%, #000), 0 10px 22px rgba(60, 35, 55, 0.3);
-  animation: pop 0.25s ease;
 }
 
-/* phones */
+/* movable chat */
+
+.chat-head.movable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.chat-head.movable:active {
+  cursor: grabbing;
+}
+
+/* zoomed-out board */
+
+.game.tiny .board .tile .glyph {
+  display: none;
+}
+
+.game.tiny .board .tile .num {
+  font-size: calc(var(--cw) * 0.76);
+  letter-spacing: -0.8px;
+}
+
+/* compact player chips */
 
 #root {
   height: 100dvh;
@@ -70,6 +88,38 @@
   font-variant-numeric: tabular-nums;
   box-shadow: 0 0 0 2px #fff;
 }
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .pill input[type='range'] {
+    display: none;
+  }
+
+  .players {
+    right: 552px;
+  }
+
+  .players:has(.chip:nth-child(4)) .chip {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 2px;
+  }
+
+  .players:has(.chip:nth-child(4)) .chip-text {
+    display: none;
+  }
+
+  .players:has(.chip:nth-child(4)) .chip-count {
+    display: grid;
+  }
+}
+
+@media (max-width: 900px) {
+  .leave {
+    width: auto;
+  }
+}
+
+/* phones, portrait */
 
 @media (max-width: 520px) {
   .controls {
@@ -152,13 +202,6 @@
     display: none;
   }
 
-  .board-wrap {
-    place-items: center start;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-radius: var(--radius);
-  }
-
   .board {
     padding: 10px;
   }
@@ -169,10 +212,8 @@
   }
 
   .rack {
-    max-width: 100%;
+    justify-content: center;
     padding: 8px 10px 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
 
   .rack .tile.fresh::after {
@@ -220,14 +261,14 @@
     white-space: nowrap;
   }
 
-  .result-chip {
-    top: 150px;
-  }
-
   .actions .small {
     padding: 9px 8px;
     font-size: 13px;
     white-space: nowrap;
+  }
+
+  .actions .reset {
+    font-size: 18px;
   }
 
   .actions .reset span {
@@ -241,9 +282,8 @@
 
   .chat-float {
     top: 104px;
-    right: 8px;
     left: 8px;
-    width: auto;
+    width: calc(100% - 16px);
     height: min(420px, calc(100% - 116px));
   }
 
@@ -258,45 +298,13 @@
   .ranks {
     font-size: 14px;
   }
-}
 
-@media (max-width: 900px) {
-  .leave {
-    width: auto;
-  }
-}
-
-@media (max-width: 520px) {
   .lobby-wrap .seats li.empty > span:not(.seat-dot) {
     display: none;
   }
-
-  .actions .reset {
-    font-size: 18px;
-  }
 }
 
-/* scroll hint */
-
-.scroll-hint {
-  position: relative;
-  flex: none;
-  height: 5px;
-  margin: 0 32px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.scroll-hint span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 999px;
-  background: var(--accent);
-}
-
-/* short landscape screens */
+/* phones, landscape */
 
 @media (max-height: 500px) and (orientation: landscape) {
   .controls {
@@ -367,11 +375,11 @@
   .status-line {
     position: fixed;
     top: 9px;
-    left: 50%;
+    right: 272px;
     z-index: 6;
-    translate: -50% 0;
     min-height: 30px;
-    padding: 2px 12px;
+    padding: 2px 10px;
+    gap: 4px 6px;
     font-size: 12px;
     white-space: nowrap;
   }
@@ -379,13 +387,11 @@
   .game {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 172px;
-    grid-template-rows: minmax(0, 1fr) auto auto auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
       'board actions'
-      'bhint actions'
-      'rack actions'
-      'rhint actions';
-    gap: 5px 8px;
+      'rack actions';
+    gap: 6px 8px;
   }
 
   .shelf {
@@ -394,31 +400,16 @@
 
   .board-wrap {
     grid-area: board;
-    place-items: start;
-    overflow: auto;
-    scrollbar-width: none;
-    border-radius: var(--radius);
   }
 
   .board {
     padding: 10px;
   }
 
-  .scroll-hint.for-board {
-    grid-area: bhint;
-  }
-
   .rack {
     grid-area: rack;
-    grid-template-columns: repeat(32, var(--cw));
-    max-width: 100%;
+    justify-content: center;
     padding: 6px 10px 10px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .scroll-hint.for-rack {
-    grid-area: rhint;
   }
 
   .rack .tile.fresh::after {
@@ -459,7 +450,6 @@
 
   .chat-float {
     top: 50px;
-    right: auto;
     left: 8px;
     width: 320px;
     height: calc(100% - 58px);
@@ -474,9 +464,5 @@
   .countdown {
     top: 20%;
     font-size: 84px;
-  }
-
-  .result-chip {
-    top: 52px;
   }
 }

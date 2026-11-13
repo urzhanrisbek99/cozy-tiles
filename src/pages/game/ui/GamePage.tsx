@@ -22,17 +22,14 @@ import { call, socket } from '@/shared/api/socket';
 import { audio } from '@/shared/lib/audio/engine';
 import { prefersReducedMotion } from '@/shared/lib/motion';
 import { Mug, SleepyCat } from '@/shared/ui/illustrations';
-import { ScrollHint } from '@/shared/ui/ScrollHint';
 import { GameResult } from '@/widgets/game-result';
 import { PlayersBar } from '@/widgets/players-bar';
 import { TurnActions } from '@/widgets/turn-actions';
 import { analyseBoard } from '../model/analyseBoard';
-import { TILE_GAP, useTileSizes } from '../model/useTileSizes';
+import { useTableLayout } from '../model/useTableLayout';
 
 const DRAFT_THROTTLE_MS = 120;
 const REJECT_FLASH_MS = 1600;
-const SCROLL_EDGE = 40;
-const SCROLL_STEP = 14;
 
 interface Props {
   view: RoomView;
@@ -60,10 +57,10 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
   const [busy, setBusy] = useState(false);
   const [rejected, setRejected] = useState(false);
   const [banner, setBanner] = useState<number | null>(null);
+  const [resultHidden, setResultHidden] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const boardAreaRef = useRef<HTMLDivElement>(null);
-  const rackAreaRef = useRef<HTMLDivElement>(null);
   const poolRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef(board);
   const rackRef = useRef(rack);
@@ -76,7 +73,19 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
   boardRef.current = board;
   rackRef.current = rack;
 
-  const size = useTileSizes(boardAreaRef);
+  const usage = useMemo(() => {
+    let boardCols = 0;
+    let boardRows = 0;
+    board.forEach((row, r) =>
+      row.forEach((v, c) => {
+        if (v === null) return;
+        boardCols = Math.max(boardCols, c + 1);
+        boardRows = Math.max(boardRows, r + 1);
+      }),
+    );
+    return { boardCols, boardRows, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
+  }, [board, rack]);
+  const layout = useTableLayout(boardAreaRef, usage);
 
   const sendDraft = useCallback(() => {
     if (draftTimer.current !== null) return;
@@ -133,19 +142,9 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     return cells;
   };
 
-  const scrollNearEdge = ({ x, y }: { x: number; y: number }) => {
-    for (const el of [boardAreaRef.current, rackAreaRef.current]) {
-      if (!el || el.scrollWidth <= el.clientWidth) continue;
-      const rect = el.getBoundingClientRect();
-      if (y < rect.top || y > rect.bottom) continue;
-      if (x < rect.left + SCROLL_EDGE) el.scrollLeft -= SCROLL_STEP;
-      else if (x > rect.right - SCROLL_EDGE) el.scrollLeft += SCROLL_STEP;
-    }
-  };
-
   const drag = useTileDrag({
     root: rootRef,
-    gap: TILE_GAP,
+    gap: layout.gap,
     disabled: busy,
     canGrab: (from) => from.zone === 'rack' || myTurn,
     tileAt: ({ zone, r, c }) => {
@@ -155,14 +154,13 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     canExtend: (ids, next) => continuesSet(ids.map((id) => tiles[id]), tiles[next]),
     landing: landingCells,
     onExtend: (count) => audio.pick(count),
-    onMove: scrollNearEdge,
     onDrop: (ids, from, to, released) => {
       ids.forEach((id, i) => motion.startFrom(id, { ...released[i], kind: 'drop' }));
       if (to) moveTiles(ids, from, to);
     },
   });
 
-  const motion = useTileMotion(rootRef, `${size.board}:${size.rack}`, [board, rack, drag.drag]);
+  const motion = useTileMotion(rootRef, `${layout.tile}:${layout.rackTile}:${layout.cols}:${layout.rows}:${layout.rackCells}`, [board, rack, drag.drag]);
 
   useEffect(() => {
     const key = myTurn ? `mine:${view.turnId}` : 'other';
@@ -270,11 +268,18 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     return flags;
   };
 
-  const style = { '--cw': `${size.board}px`, '--rw': `${size.rack}px`, '--gap': `${TILE_GAP}px` } as CSSProperties;
+  const style = {
+    '--cw': `${layout.tile}px`,
+    '--rw': `${layout.rackTile}px`,
+    '--gap': `${layout.gap}px`,
+    '--cols': layout.cols,
+    '--rack-cols': layout.rackCols,
+  } as CSSProperties;
+  const ended = view.phase === 'ended' && view.result !== null;
   const turnPlayer = view.players.find((p) => p.id === view.turnPlayerId);
 
   return (
-    <div className="game" style={style} ref={rootRef}>
+    <div className={`game ${layout.tiny ? 'tiny' : ''}`} style={style} ref={rootRef}>
       <PlayersBar view={view} deadline={deadline} placedThisTurn={analysis.placed} poolRef={poolRef} />
 
       <div className={`status-line ${myTurn ? 'mine' : ''}`} aria-live="polite">
@@ -286,12 +291,17 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
             Первый выход: {analysis.meldValue} / {INITIAL_MELD}
           </span>
         )}
+        {ended && resultHidden && (
+          <button className="result-chip" onClick={() => setResultHidden(false)}>
+            🏆 Результаты
+          </button>
+        )}
       </div>
 
-      <div className="board-wrap" ref={boardAreaRef} onScroll={motion.forgetPlaces}>
+      <div className="board-wrap" ref={boardAreaRef}>
         <div className={`board ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
-          {board.map((row, r) =>
-            row.map((id, c) => (
+          {board.slice(0, layout.rows).map((row, r) =>
+            row.slice(0, layout.cols).map((id, c) => (
               <Cell
                 key={r * BOARD_COLS + c}
                 zone="board"
@@ -305,14 +315,13 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
           )}
         </div>
       </div>
-      <ScrollHint target={boardAreaRef} className="for-board" />
 
       <footer className="shelf">
         <div className="decor">
           <SleepyCat awake={myTurn} />
         </div>
-        <div className={`rack ${myTurn ? 'active' : ''}`} ref={rackAreaRef} onPointerDown={drag.onPointerDown} onScroll={motion.forgetPlaces}>
-          {rack.map((id, i) => (
+        <div className={`rack ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
+          {rack.slice(0, layout.rackCells).map((id, i) => (
             <Cell
               key={i}
               zone="rack"
@@ -324,7 +333,6 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
             />
           ))}
         </div>
-        <ScrollHint target={rackAreaRef} className="for-rack" />
         <TurnActions
           canAct={myTurn && !busy}
           canFinish={analysis.placed > 0}
@@ -363,7 +371,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
         </div>
       )}
 
-      {view.phase === 'ended' && view.result && <GameResult view={view} onLeave={onLeave} flash={flash} />}
+      {ended && <GameResult view={view} hidden={resultHidden} onHide={() => setResultHidden(true)} onLeave={onLeave} flash={flash} />}
     </div>
   );
 }

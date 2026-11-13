@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
-import type { Mood } from '@/shared/lib/audio/engine';
+import type { Mood } from '@/shared/config/themes';
 
 function seeded(seed: number) {
   let s = seed;

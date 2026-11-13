@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { ChatMessage } from '@core/types';
 import { CatFace } from '@/entities/player';
 
@@ -14,10 +14,11 @@ interface Props {
   title: string;
   hint: string;
   onClose?: () => void;
+  headerProps?: HTMLAttributes<HTMLElement>;
   autoFocus?: boolean;
 }
 
-export function Chat({ messages, you, send, title, hint, onClose, autoFocus }: Props) {
+export function Chat({ messages, you, send, title, hint, onClose, headerProps, autoFocus }: Props) {
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -38,7 +39,7 @@ export function Chat({ messages, you, send, title, hint, onClose, autoFocus }: P
   return (
     <section className="card chat" aria-label={title}>
       <div className="chat-inner">
-        <header className="chat-head">
+        <header className={`chat-head ${headerProps ? 'movable' : ''}`} {...headerProps}>
           <span>💬 {title}</span>
           {onClose && (
             <button className="chat-close" onClick={onClose} aria-label="Закрыть чат">
