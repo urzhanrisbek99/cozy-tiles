@@ -1,3 +1,4 @@
+import { localRect, toLocal, viewportSize } from './viewport';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 
 const EDGE = 8;
@@ -33,8 +34,9 @@ export function useDraggable(storageKey: string) {
 
   const clamp = useCallback((point: Point): Point => {
     const el = ref.current;
-    const maxX = window.innerWidth - (el?.offsetWidth ?? 0) - EDGE;
-    const maxY = window.innerHeight - (el?.offsetHeight ?? 0) - EDGE;
+    const screen = viewportSize();
+    const maxX = screen.width - (el?.offsetWidth ?? 0) - EDGE;
+    const maxY = screen.height - (el?.offsetHeight ?? 0) - EDGE;
     return { x: Math.max(EDGE, Math.min(point.x, maxX)), y: Math.max(EDGE, Math.min(point.y, maxY)) };
   }, []);
 
@@ -50,15 +52,17 @@ export function useDraggable(storageKey: string) {
 
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button, input, a')) return;
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    grab.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (!ref.current) return;
+    const rect = localRect(ref.current);
+    const at = toLocal(e.clientX, e.clientY);
+    grab.current = { x: at.x - rect.left, y: at.y - rect.top };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     if (!grab.current) return;
-    latest.current = clamp({ x: e.clientX - grab.current.x, y: e.clientY - grab.current.y });
+    const at = toLocal(e.clientX, e.clientY);
+    latest.current = clamp({ x: at.x - grab.current.x, y: at.y - grab.current.y });
     setPosition(latest.current);
   };
 

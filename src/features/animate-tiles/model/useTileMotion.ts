@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { EASE, prefersReducedMotion } from '@/shared/lib/motion';
+import { localRect } from '@/shared/lib/viewport';
 
 export interface Origin {
   x: number;
@@ -51,7 +52,7 @@ export function useTileMotion(root: RefObject<HTMLElement | null>, layoutKey: st
     let dealt = 0;
     el.querySelectorAll<HTMLElement>('.cell > .tile[data-id]').forEach((tile) => {
       const id = Number(tile.dataset.id);
-      const rect = tile.parentElement!.getBoundingClientRect();
+      const rect = localRect(tile.parentElement!);
       next.set(id, { x: rect.left, y: rect.top });
       if (!animate) return;
       const from = origins.current.get(id) ?? prev.get(id);

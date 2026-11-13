@@ -1,13 +1,12 @@
 import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { BOARD_COLS, BOARD_ROWS } from '@core/rules';
 import { RACK_COLS } from '@/features/arrange-tiles';
+import { localRect, screenMode, viewportSize, type Screen, type Size } from '@/shared/lib/viewport';
 
 const TILE_RATIO = 1.3;
 const GAP = 3;
 const TIGHT_GAP = 2;
 const TINY_TILE = 18;
-const PHONE_WIDTH = 520;
-const SHORT_HEIGHT = 500;
 const SIDE_DECOR = 380;
 const SIDE_ACTIONS = 250;
 const RACK_PADDING = 20;
@@ -15,8 +14,6 @@ const PHONE_PADDING = { portrait: 16, landscape: 12 };
 const RACK_ROWS = 2;
 const RACK_TILE = { portrait: 40, landscape: 28 };
 const PHONE_TILE = 40;
-
-export type Screen = 'desktop' | 'portrait' | 'landscape';
 
 export interface TableUsage {
   firstCol: number;
@@ -42,18 +39,7 @@ export interface TableLayout {
   tiny: boolean;
 }
 
-interface Size {
-  width: number;
-  height: number;
-}
-
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.floor(value)));
-const viewport = (): Size => ({ width: window.innerWidth, height: window.innerHeight });
-
-function screenOf({ width, height }: Size): Screen {
-  if (height <= SHORT_HEIGHT && width > height) return 'landscape';
-  return width <= PHONE_WIDTH ? 'portrait' : 'desktop';
-}
 
 interface Span {
   start: number;
@@ -143,7 +129,7 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown
 }
 
 export function useTableLayout(boardArea: RefObject<HTMLElement | null>, usage: TableUsage): TableLayout {
-  const [window_, setWindow] = useState(viewport);
+  const [window_, setWindow] = useState(viewportSize);
   const [area, setArea] = useState<Size>({ width: 600, height: 400 });
   const shown = useRef<TableLayout | null>(null);
 
@@ -152,8 +138,8 @@ export function useTableLayout(boardArea: RefObject<HTMLElement | null>, usage: 
     if (!el) return;
     const same = (a: Size, b: Size) => a.width === b.width && a.height === b.height;
     const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
-      const next = viewport();
+      const { width, height } = localRect(el);
+      const next = viewportSize();
       setWindow((prev) => (same(prev, next) ? prev : next));
       setArea((prev) => (same(prev, { width, height }) ? prev : { width, height }));
     };
@@ -171,7 +157,7 @@ export function useTableLayout(boardArea: RefObject<HTMLElement | null>, usage: 
 
   const { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength } = usage;
   return useMemo(() => {
-    const screen = screenOf(window_);
+    const screen = screenMode();
     const before = shown.current?.screen === screen ? shown.current : null;
     shown.current = plan(screen, window_, area, { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength }, before);
     return shown.current;

@@ -1,4 +1,4 @@
-export function flyTile(layer: HTMLElement, from: DOMRect, to: DOMRect) {
+export function flyTile(layer: HTMLElement, from: { left: number; top: number }, to: { left: number; top: number }) {
   const card = document.createElement('div');
   card.className = 'fly-tile';
   card.style.left = `${from.left + 10}px`;

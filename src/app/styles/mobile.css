@@ -69,38 +69,30 @@
   display: none;
 }
 
-.rotate-hint {
-  display: none;
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
-@media (display-mode: standalone) and (orientation: portrait) and (max-width: 600px) {
-  .rotate-hint {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: var(--sky-1);
-    text-align: center;
-  }
+/* installed app held upright: the page is drawn turned on its side */
 
-  .rotate-hint span {
-    display: inline-block;
-    font-size: 54px;
-    animation: rotate-phone 2.4s ease-in-out infinite;
-  }
+html.sideways {
+  --safe-top: env(safe-area-inset-right, 0px);
+  --safe-right: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: env(safe-area-inset-left, 0px);
+  --safe-left: env(safe-area-inset-top, 0px);
 }
 
-@keyframes rotate-phone {
-  0%,
-  25% {
-    rotate: 0deg;
-  }
-  60%,
-  100% {
-    rotate: -90deg;
-  }
+html.sideways #root {
+  position: fixed;
+  top: 0;
+  left: 100%;
+  width: 100dvh;
+  height: 100dvw;
+  transform-origin: 0 0;
+  transform: rotate(90deg);
 }
 
 /* compact player chips */
@@ -159,7 +151,7 @@
 
 /* phones, portrait */
 
-@media (max-width: 520px) {
+html.phone-portrait {
   .controls {
     top: 8px;
     right: 8px;
@@ -184,7 +176,7 @@
   }
 
   .app.in-game {
-    padding: 104px 8px max(8px, env(safe-area-inset-bottom));
+    padding: 104px 8px max(8px, var(--safe-bottom));
   }
 
   .players {
@@ -352,16 +344,16 @@
 
 /* phones, landscape */
 
-@media (max-height: 500px) and (orientation: landscape) {
+html.phone-landscape {
   .controls {
     top: 6px;
-    right: 8px;
+    right: max(8px, var(--safe-right));
     gap: 6px;
   }
 
-  :root:has(.game) .controls {
+  &:has(.game) .controls {
     top: 4px;
-    right: max(8px, env(safe-area-inset-right));
+    right: max(8px, var(--safe-right));
     width: 196px;
     height: 36px;
     align-items: center;
@@ -374,7 +366,7 @@
     box-shadow: 0 4px 14px rgba(60, 35, 55, 0.16);
   }
 
-  :root:has(.game) .pill {
+  &:has(.game) .pill {
     gap: 0;
     padding: 0;
     background: none;
@@ -382,13 +374,13 @@
     box-shadow: none;
   }
 
-  :root:has(.game) .pill button {
+  &:has(.game) .pill button {
     width: 30px;
     height: 30px;
     font-size: 15px;
   }
 
-  :root:has(.game) .leave {
+  &:has(.game) .leave {
     width: 34px;
     height: 30px;
     padding: 0;
@@ -397,7 +389,7 @@
     box-shadow: none;
   }
 
-  :root:has(.game) .leave.armed {
+  &:has(.game) .leave.armed {
     background: #e25c73;
   }
 
@@ -423,16 +415,211 @@
   }
 
   .app {
-    padding: 52px 8px 8px;
+    padding: 48px max(8px, var(--safe-right)) 8px max(8px, var(--safe-left));
   }
 
   .app:not(.in-game) {
-    justify-content: flex-start;
-    overflow-y: auto;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .card {
+    padding: 12px 16px;
+    border-radius: 22px;
+  }
+
+  .home {
+    width: min(660px, 100%);
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 20px;
+  }
+
+  .home > * {
+    grid-column: 2;
+  }
+
+  .home > .logo {
+    grid-area: 1 / 1 / span 4;
+  }
+
+  .logo h1 {
+    margin-top: 8px;
+    font-size: 30px;
+  }
+
+  .logo-tile {
+    width: 36px;
+    height: 48px;
+    font-size: 21px;
+  }
+
+  .field {
+    gap: 4px;
+    font-size: 14px;
+  }
+
+  .field input,
+  .code-input {
+    padding: 7px 14px;
+  }
+
+  .cats {
+    grid-template-columns: repeat(6, 42px);
+  }
+
+  .cat-pick {
+    border-radius: 14px;
+  }
+
+  .home .big {
+    padding: 9px 20px;
+    font-size: 16px;
+  }
+
+  .lobby-wrap {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .lobby-wrap .lobby {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    align-content: center;
+    gap: 8px 10px;
+    max-height: 100%;
+    overflow: auto;
+  }
+
+  .lobby > * {
+    grid-column: 1 / -1;
+  }
+
+  .lobby > p.muted:nth-child(2) {
+    display: none;
+  }
+
+  .lobby > .room-code {
+    grid-column: 1;
+    margin: 0 0 0 8px;
+    font-size: 30px;
+    letter-spacing: 6px;
+  }
+
+  .lobby > .room-code + button {
+    grid-column: 2;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
+  .welcome {
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 16px;
+  }
+
+  .welcome h2 {
+    font-size: 15px;
+  }
+
+  .welcome .muted,
+  .lobby .field > span {
+    display: none;
+  }
+
+  .welcome-cat {
+    width: 34px;
+    height: 34px;
+  }
+
+  .lobby-wrap .seats li {
+    padding: 6px 4px 5px;
+  }
+
+  .lobby-wrap .seats li svg,
+  .lobby-wrap .seat-dot {
+    width: 30px;
+    height: 30px;
+  }
+
+  .lobby-wrap .segmented {
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .lobby-wrap .segmented button {
+    padding: 5px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .lobby .big {
+    padding: 9px 20px;
+    font-size: 16px;
+  }
+
+  .chat {
+    min-height: 0;
+  }
+
+  .chat-head {
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+
+  .chat-list {
+    padding: 8px 10px;
+  }
+
+  .chat-empty {
+    font-size: 13px;
+  }
+
+  .chat-empty-icon {
+    font-size: 24px;
+  }
+
+  .bubble {
+    padding: 6px 11px;
+    font-size: 13px;
+  }
+
+  .chat-quick {
+    padding: 6px 10px 0;
+  }
+
+  .chat-quick button {
+    padding: 4px 9px;
+    font-size: 12px;
+  }
+
+  .chat-form {
+    padding: 8px 10px 10px;
+  }
+
+  .chat-form input {
+    padding: 7px 12px;
+    font-size: 14px;
+  }
+
+  .chat-form button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .chat-form svg {
+    width: 18px;
+    height: 18px;
   }
 
   .app.in-game {
-    padding: 4px max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+    padding: 4px max(8px, var(--safe-right)) 0 max(8px, var(--safe-left));
   }
 
   .game::before {
@@ -453,7 +640,7 @@
 
   .players,
   .actions {
-    margin-bottom: max(6px, env(safe-area-inset-bottom));
+    margin-bottom: max(6px, var(--safe-bottom));
   }
 
   .reaction {
@@ -495,10 +682,10 @@
     align-self: stretch;
     margin-top: 42px;
     min-height: 0;
-    max-height: 48px;
+    max-height: 62px;
     overflow: hidden;
-    padding: 4px 8px;
-    gap: 2px 6px;
+    padding: 8px 12px;
+    gap: 4px 6px;
     border-radius: 14px;
     font-size: 12px;
   }
@@ -511,7 +698,7 @@
       'side board status'
       'side board actions'
       'side rack actions';
-    gap: 6px 8px;
+    gap: 6px 14px;
   }
 
   .shelf {
@@ -538,7 +725,7 @@
     box-sizing: content-box;
     height: var(--rack-h);
     place-content: center;
-    padding: 6px 10px max(10px, env(safe-area-inset-bottom));
+    padding: 6px 10px max(10px, var(--safe-bottom));
     border-radius: 18px 18px 0 0;
   }
 
@@ -600,9 +787,9 @@
 
   .chat-float {
     top: 8px;
-    left: 60px;
-    width: 320px;
-    height: calc(100% - 16px);
+    left: calc(max(8px, var(--safe-left)) + 58px);
+    width: 264px;
+    height: min(220px, calc(100% - 16px));
   }
 
   .turn-banner {

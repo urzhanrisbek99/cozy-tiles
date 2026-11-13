@@ -21,6 +21,7 @@ import { Countdown } from '@/features/turn-timer';
 import { call, socket } from '@/shared/api/socket';
 import { audio } from '@/shared/lib/audio/engine';
 import { prefersReducedMotion } from '@/shared/lib/motion';
+import { localRect } from '@/shared/lib/viewport';
 import { Mug, SleepyCat } from '@/shared/ui/illustrations';
 import { GameResult } from '@/widgets/game-result';
 import { PlayersBar } from '@/widgets/players-bar';
@@ -172,8 +173,11 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     turnKey.current = key;
 
     const root = rootRef.current;
-    const chipOf = (id: string | null) => (id ? root?.querySelector(`[data-player="${id}"]`)?.getBoundingClientRect() : undefined);
-    const bag = poolRef.current?.getBoundingClientRect();
+    const chipOf = (id: string | null) => {
+      const chip = id ? root?.querySelector(`[data-player="${id}"]`) : null;
+      return chip ? localRect(chip) : undefined;
+    };
+    const bag = poolRef.current ? localRect(poolRef.current) : undefined;
 
     const shown = new Set(gridIds(boardRef.current));
     const mine = new Set(view.rack);

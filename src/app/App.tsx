@@ -115,13 +115,6 @@ export function App() {
         </div>
       )}
       {rulesOpen && <RulesDialog onClose={() => setRulesOpen(false)} />}
-      <div className="rotate-hint" role="status">
-        <div className="card">
-          <span>📱</span>
-          <h2>Поверни телефон</h2>
-          <p className="muted">В приложении играем горизонтально</p>
-        </div>
-      </div>
     </>
   );
 }

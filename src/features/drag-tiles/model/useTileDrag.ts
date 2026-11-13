@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { Loc, Zone } from '@/entities/tile';
+import { localRect, toClient, toLocal } from '@/shared/lib/viewport';
 
 const DRAG_SLOP = 6;
 const HOLD_FIRST_MS = 320;
@@ -46,7 +47,7 @@ function nearestCell(area: Element, x: number, y: number): Loc | null {
   let best: HTMLElement | null = null;
   let bestDist = Infinity;
   area.querySelectorAll<HTMLElement>('[data-zone]').forEach((cell) => {
-    const rect = cell.getBoundingClientRect();
+    const rect = localRect(cell);
     const dist = Math.hypot(rect.left + rect.width / 2 - x, rect.top + rect.height / 2 - y);
     if (dist < bestDist) {
       best = cell;
@@ -57,11 +58,12 @@ function nearestCell(area: Element, x: number, y: number): Loc | null {
 }
 
 function locate(root: HTMLElement | null, x: number, y: number): Loc | null {
-  const hit = document.elementFromPoint(x, y);
+  const client = toClient(x, y);
+  const hit = document.elementFromPoint(client.x, client.y);
   const cell = hit?.closest<HTMLElement>('[data-zone]');
   if (cell) return toLoc(cell);
   for (const area of root?.querySelectorAll('.board, .rack') ?? []) {
-    const rect = area.getBoundingClientRect();
+    const rect = localRect(area);
     const inside =
       x >= rect.left - SNAP_MARGIN && x <= rect.right + SNAP_MARGIN && y >= rect.top - SNAP_MARGIN && y <= rect.bottom + SNAP_MARGIN;
     if (inside) return nearestCell(area, x, y);
@@ -113,7 +115,7 @@ export function useTileDrag(options: Options) {
   const move = (e: PointerEvent) => {
     const g = gesture.current;
     if (!g) return;
-    g.at = { x: e.clientX, y: e.clientY };
+    g.at = toLocal(e.clientX, e.clientY);
     if (!g.started) {
       if (Math.hypot(g.at.x - g.start.x, g.at.y - g.start.y) < DRAG_SLOP) return;
       g.started = true;
@@ -137,11 +139,12 @@ export function useTileDrag(options: Options) {
     highlight(null, []);
     setPicked([]);
     if (!g.started) return;
+    const at = toLocal(e.clientX, e.clientY);
     const released = g.ids.map((_, i) => ({
-      x: e.clientX - g.grab.x + i * (g.width + latest.current.gap),
-      y: e.clientY - g.grab.y,
+      x: at.x - g.grab.x + i * (g.width + latest.current.gap),
+      y: at.y - g.grab.y,
     }));
-    const centre = tileCentre(g, { x: e.clientX, y: e.clientY });
+    const centre = tileCentre(g, at);
     const to = e.type === 'pointercancel' ? null : locate(latest.current.root.current, centre.x, centre.y);
     latest.current.onDrop(g.ids, g.from, to, released);
     setDrag(null);
@@ -172,15 +175,15 @@ export function useTileDrag(options: Options) {
     const from: Loc = { zone: cell.dataset.zone as Zone, r: Number(cell.dataset.r), c: Number(cell.dataset.c) };
     if (!options.canGrab(from)) return;
     e.preventDefault();
-    const rect = cell.getBoundingClientRect();
+    const rect = localRect(cell);
     const id = Number(tile.dataset.id);
-    const at = { x: e.clientX, y: e.clientY };
+    const at = toLocal(e.clientX, e.clientY);
     gesture.current = {
       ids: [id],
       from,
       start: at,
       at,
-      grab: { x: e.clientX - rect.left, y: e.clientY - rect.top },
+      grab: { x: at.x - rect.left, y: at.y - rect.top },
       width: rect.width,
       height: rect.height,
       started: false,
