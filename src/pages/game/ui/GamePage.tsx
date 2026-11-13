@@ -74,16 +74,20 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
   rackRef.current = rack;
 
   const usage = useMemo(() => {
-    let boardCols = 0;
-    let boardRows = 0;
+    let firstCol = BOARD_COLS;
+    let lastCol = -1;
+    let firstRow = board.length;
+    let lastRow = -1;
     board.forEach((row, r) =>
       row.forEach((v, c) => {
         if (v === null) return;
-        boardCols = Math.max(boardCols, c + 1);
-        boardRows = Math.max(boardRows, r + 1);
+        firstCol = Math.min(firstCol, c);
+        lastCol = Math.max(lastCol, c);
+        firstRow = Math.min(firstRow, r);
+        lastRow = Math.max(lastRow, r);
       }),
     );
-    return { boardCols, boardRows, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
+    return { firstCol, lastCol, firstRow, lastRow, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
   }, [board, rack]);
   const layout = useTableLayout(boardAreaRef, usage);
 
@@ -160,7 +164,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     },
   });
 
-  const motion = useTileMotion(rootRef, `${layout.tile}:${layout.rackTile}:${layout.cols}:${layout.rows}:${layout.rackCells}`, [board, rack, drag.drag]);
+  const motion = useTileMotion(rootRef, `${layout.tile}:${layout.rackTile}:${layout.col0}:${layout.row0}:${layout.cols}:${layout.rows}:${layout.rackCells}`, [board, rack, drag.drag]);
 
   useEffect(() => {
     const key = myTurn ? `mine:${view.turnId}` : 'other';
@@ -300,13 +304,13 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
 
       <div className="board-wrap" ref={boardAreaRef}>
         <div className={`board ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
-          {board.slice(0, layout.rows).map((row, r) =>
-            row.slice(0, layout.cols).map((id, c) => (
+          {board.slice(layout.row0, layout.row0 + layout.rows).map((row, i) =>
+            row.slice(layout.col0, layout.col0 + layout.cols).map((id, j) => (
               <Cell
-                key={r * BOARD_COLS + c}
+                key={(layout.row0 + i) * BOARD_COLS + layout.col0 + j}
                 zone="board"
-                r={r}
-                c={c}
+                r={layout.row0 + i}
+                c={layout.col0 + j}
                 tile={id === null ? null : tiles[id]}
                 cls={id === null ? '' : (analysis.setEdge.get(id) ?? '')}
                 flags={id === null ? '' : flagsFor(id, 'board')}

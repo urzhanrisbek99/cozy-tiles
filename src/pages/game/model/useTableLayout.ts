@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { BOARD_COLS, BOARD_ROWS } from '@core/rules';
 import { RACK_COLS } from '@/features/arrange-tiles';
 
@@ -10,13 +10,18 @@ const PHONE_WIDTH = 520;
 const SHORT_HEIGHT = 500;
 const SIDE_DECOR = 380;
 const SIDE_ACTIONS = 250;
-const LANDSCAPE_ACTIONS = 180;
+const RACK_PADDING = 20;
+const PHONE_PADDING = 16;
+const PHONE_TILE = 40;
+const WIDE_RACK = 20;
 
 export type Screen = 'desktop' | 'portrait' | 'landscape';
 
 export interface TableUsage {
-  boardCols: number;
-  boardRows: number;
+  firstCol: number;
+  lastCol: number;
+  firstRow: number;
+  lastRow: number;
   rackLast: number;
   rackLength: number;
 }
@@ -26,6 +31,8 @@ export interface TableLayout {
   tile: number;
   rackTile: number;
   gap: number;
+  col0: number;
+  row0: number;
   cols: number;
   rows: number;
   rackCols: number;
@@ -47,17 +54,36 @@ function screenOf({ width, height }: Size): Screen {
   return width <= PHONE_WIDTH ? 'portrait' : 'desktop';
 }
 
-function fitTile(area: Size, cols: number, rows: number, padding: number, min: number) {
+interface Span {
+  start: number;
+  size: number;
+}
+
+function widen({ start, size }: Span, target: number, total: number, keep?: number): Span {
+  const next = Math.min(total, Math.max(size, target));
+  const lowest = Math.max(0, start + size - next);
+  const highest = Math.min(start, total - next);
+  return { start: clamp(keep ?? start - (next - size) / 2, lowest, highest), size: next };
+}
+
+function usedSpan(first: number, last: number, min: number, total: number, keep?: number): Span {
+  if (last < 0) return widen({ start: total / 2, size: 0 }, min, total, keep);
+  const start = Math.max(0, Math.floor((first - 1) / 2) * 2);
+  const end = Math.min(total, Math.ceil((last + 2) / 2) * 2);
+  return widen({ start, size: end - start }, min, total, keep);
+}
+
+function fitTile(area: Size, cols: number, rows: number, padding: number, min: number, max = 52) {
   const fit = (gap: number) => {
     const byWidth = (area.width - padding - gap * (cols - 1)) / cols;
     const byHeight = (area.height - padding - gap * (rows - 1)) / rows / TILE_RATIO;
-    return clamp(Math.min(byWidth, byHeight), min, 52);
+    return clamp(Math.min(byWidth, byHeight), min, max);
   };
   const tile = fit(GAP);
   return tile < TINY_TILE ? { tile: fit(TIGHT_GAP), gap: TIGHT_GAP } : { tile, gap: GAP };
 }
 
-function plan(screen: Screen, window: Size, area: Size, usage: TableUsage): TableLayout {
+function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown: TableLayout | null): TableLayout {
   if (screen === 'desktop') {
     const side = (window.width > 1280 ? SIDE_DECOR : 0) + (window.width > 900 ? SIDE_ACTIONS : 0);
     const { tile, gap } = fitTile(area, BOARD_COLS, BOARD_ROWS, 28, 16);
@@ -66,6 +92,8 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage): Tabl
       tile,
       gap,
       rackTile: clamp((window.width - side - 48 - GAP * (RACK_COLS - 1)) / RACK_COLS, 30, 50),
+      col0: 0,
+      row0: 0,
       cols: BOARD_COLS,
       rows: BOARD_ROWS,
       rackCols: RACK_COLS,
@@ -75,20 +103,24 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage): Tabl
   }
 
   const portrait = screen === 'portrait';
-  const cols = roundUp(usage.boardCols + 2, 4, portrait ? 12 : 16, BOARD_COLS);
-  const rows = portrait ? BOARD_ROWS : roundUp(usage.boardRows + 1, 2, 4, BOARD_ROWS);
-  const rackCols = portrait ? 9 : RACK_COLS;
-  const rackWidth = portrait ? window.width - 36 : window.width - LANDSCAPE_ACTIONS - 44;
-  const { tile, gap } = fitTile(area, cols, rows, 24, 8);
+  const needCols = usedSpan(usage.firstCol, usage.lastCol, portrait ? 9 : 12, BOARD_COLS, shown?.col0);
+  const needRows = usedSpan(usage.firstRow, usage.lastRow, portrait ? 4 : 3, BOARD_ROWS, shown?.row0);
+  const { tile, gap } = fitTile(area, needCols.size, needRows.size, PHONE_PADDING, 8, PHONE_TILE);
+  const cols = widen(needCols, Math.floor((area.width - PHONE_PADDING + gap) / (tile + gap)), BOARD_COLS, shown?.col0);
+  const rows = widen(needRows, Math.floor((area.height - PHONE_PADDING + gap) / (tile * TILE_RATIO + gap)), BOARD_ROWS, shown?.row0);
+  const oneMoreRow = usage.rackLast >= RACK_COLS && usage.rackLast < WIDE_RACK - 1;
+  const rackCols = portrait ? 9 : oneMoreRow ? WIDE_RACK : RACK_COLS;
   return {
     screen,
     tile,
     gap,
-    rackTile: clamp((rackWidth - GAP * (rackCols - 1)) / rackCols, 22, 44),
-    cols,
-    rows,
+    rackTile: clamp((area.width - RACK_PADDING - GAP * (rackCols - 1)) / rackCols, 22, 44),
+    col0: cols.start,
+    row0: rows.start,
+    cols: cols.size,
+    rows: rows.size,
     rackCols,
-    rackCells: Math.min(usage.rackLength, roundUp(usage.rackLast + 3, rackCols, portrait ? rackCols * 2 : rackCols, Infinity)),
+    rackCells: Math.min(usage.rackLength, roundUp(usage.rackLast + 2, rackCols, portrait ? rackCols * 2 : rackCols, Infinity)),
     tiny: tile < TINY_TILE,
   };
 }
@@ -96,29 +128,35 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage): Tabl
 export function useTableLayout(boardArea: RefObject<HTMLElement | null>, usage: TableUsage): TableLayout {
   const [window_, setWindow] = useState(viewport);
   const [area, setArea] = useState<Size>({ width: 600, height: 400 });
-
-  useEffect(() => {
-    const measure = () => setWindow(viewport());
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
+  const shown = useRef<TableLayout | null>(null);
 
   useLayoutEffect(() => {
     const el = boardArea.current;
     if (!el) return;
+    const same = (a: Size, b: Size) => a.width === b.width && a.height === b.height;
     const measure = () => {
       const { width, height } = el.getBoundingClientRect();
-      setArea((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
+      const next = viewport();
+      setWindow((prev) => (same(prev, next) ? prev : next));
+      setArea((prev) => (same(prev, { width, height }) ? prev : { width, height }));
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
   }, [boardArea]);
 
-  const { boardCols, boardRows, rackLast, rackLength } = usage;
-  return useMemo(
-    () => plan(screenOf(window_), window_, area, { boardCols, boardRows, rackLast, rackLength }),
-    [window_, area, boardCols, boardRows, rackLast, rackLength],
-  );
+  const { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength } = usage;
+  return useMemo(() => {
+    const screen = screenOf(window_);
+    const before = shown.current?.screen === screen ? shown.current : null;
+    shown.current = plan(screen, window_, area, { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength }, before);
+    return shown.current;
+  }, [window_, area, firstCol, lastCol, firstRow, lastRow, rackLast, rackLength]);
 }
