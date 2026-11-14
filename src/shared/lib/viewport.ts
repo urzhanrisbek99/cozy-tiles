@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+
 const PHONE_WIDTH = 520;
 const SHORT_HEIGHT = 500;
 const SIDEWAYS_WIDTH = 600;
@@ -23,6 +25,7 @@ export interface Box extends Size {
 
 let uprightHolds = 0;
 let flipped = false;
+const watchers = new Set<() => void>();
 
 const installed = () =>
   window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
@@ -81,7 +84,17 @@ function sync() {
   root.toggle('flipped', sideways && flipped);
   root.toggle('phone-landscape', mode === 'landscape');
   root.toggle('phone-portrait', mode === 'portrait');
+  watchers.forEach((notify) => notify());
 }
+
+function watch(notify: () => void) {
+  watchers.add(notify);
+  return () => {
+    watchers.delete(notify);
+  };
+}
+
+export const useSideways = () => useSyncExternalStore(watch, isSideways);
 
 export function holdUpright() {
   uprightHolds += 1;

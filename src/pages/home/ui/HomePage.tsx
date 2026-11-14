@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CAT_COATS, CatFace } from '@/entities/player';
 import type { Prefs } from '@/shared/lib/prefs';
-import { isSideways } from '@/shared/lib/viewport';
+import { useSideways } from '@/shared/lib/viewport';
 import { Logo } from '@/widgets/logo';
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 export function HomePage({ prefs, update, onCreate, onJoin, onRename, onAskCode }: Props) {
   const [code, setCode] = useState(() => new URLSearchParams(window.location.search).get('room')?.toUpperCase() ?? '');
   const invited = code.length === 4;
+  const sideways = useSideways();
   return (
     <main className="card home">
       <Logo>
@@ -65,11 +66,8 @@ export function HomePage({ prefs, update, onCreate, onJoin, onRename, onAskCode 
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
-          onPointerDown={(e) => {
-            if (!isSideways()) return;
-            e.preventDefault();
-            onAskCode();
-          }}
+          readOnly={sideways}
+          onClick={() => sideways && onAskCode()}
           placeholder="КОД"
           aria-label="Код комнаты"
           className="code-input"

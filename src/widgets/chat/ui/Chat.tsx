@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type HTMLAttributes } from 'react';
 import type { ChatMessage } from '@core/types';
 import { CatFace } from '@/entities/player';
+import { holdUpright, useSideways } from '@/shared/lib/viewport';
 
 const QUICK = ['Привет! 👋', 'Начинаем? ✨', 'Удачи всем 🍀', 'Хороший ход 👏', 'Минутку ☕'];
 const MAX_LENGTH = 200;
+const BLUR_GRACE_MS = 250;
 
 const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -22,6 +24,25 @@ export function Chat({ messages, you, send, title, hint, onClose, headerProps, a
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const sideways = useSideways();
+  const [composing, setComposing] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!composing) return;
+    const release = holdUpright();
+    inputRef.current?.focus();
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+    return release;
+  }, [composing]);
+
+  const stopComposing = () => {
+    if (!composing) return;
+    window.setTimeout(() => {
+      if (document.activeElement !== inputRef.current) setComposing(false);
+    }, BLUR_GRACE_MS);
+  };
 
   useEffect(() => {
     const list = listRef.current;
@@ -37,7 +58,7 @@ export function Chat({ messages, you, send, title, hint, onClose, headerProps, a
   };
 
   return (
-    <section className="card chat" aria-label={title}>
+    <section className={`card chat ${composing ? 'composing' : ''}`} aria-label={title}>
       <div className="chat-inner">
         <header className={`chat-head ${headerProps ? 'movable' : ''}`} {...headerProps}>
           <span>💬 {title}</span>
@@ -108,6 +129,10 @@ export function Chat({ messages, you, send, title, hint, onClose, headerProps, a
 
         <form className="chat-form" onSubmit={submit}>
           <input
+            ref={inputRef}
+            readOnly={sideways && !composing}
+            onClick={() => sideways && setComposing(true)}
+            onBlur={stopComposing}
             value={text}
             maxLength={MAX_LENGTH}
             placeholder="Напиши сообщение…"

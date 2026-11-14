@@ -108,6 +108,17 @@ html.sideways.flipped #root {
   transform: rotate(-90deg);
 }
 
+.chat.composing {
+  position: fixed;
+  z-index: 60;
+  top: max(8px, var(--safe-top));
+  left: 8px;
+  right: 8px;
+  width: auto;
+  height: min(300px, 40%);
+  min-height: 0;
+}
+
 /* compact player chips */
 
 #root {

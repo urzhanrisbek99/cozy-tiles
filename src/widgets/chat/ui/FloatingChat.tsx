@@ -21,7 +21,7 @@ export function FloatingChat({ messages, you, send, onClose }: Props) {
         hint="Напиши что-нибудь друзьям — сообщение увидят все за столом"
         onClose={onClose}
         headerProps={handle}
-        autoFocus
+        autoFocus={window.matchMedia('(hover: hover)').matches}
       />
     </div>
   );

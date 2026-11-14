@@ -31,6 +31,7 @@ import { useTableLayout } from '../model/useTableLayout';
 
 const DRAFT_THROTTLE_MS = 120;
 const REJECT_FLASH_MS = 1600;
+const AUTO_FINISH_MS = 600;
 
 interface Props {
   view: RoomView;
@@ -79,16 +80,18 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     let lastCol = -1;
     let firstRow = board.length;
     let lastRow = -1;
+    let onTable = 0;
     board.forEach((row, r) =>
       row.forEach((v, c) => {
         if (v === null) return;
+        onTable += 1;
         firstCol = Math.min(firstCol, c);
         lastCol = Math.max(lastCol, c);
         firstRow = Math.min(firstRow, r);
         lastRow = Math.max(lastRow, r);
       }),
     );
-    return { firstCol, lastCol, firstRow, lastRow, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
+    return { firstCol, lastCol, firstRow, lastRow, tiles: onTable, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
   }, [board, rack]);
   const layout = useTableLayout(boardAreaRef, usage);
 
@@ -258,6 +261,24 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
     if (rejectTimer.current !== null) window.clearTimeout(rejectTimer.current);
     rejectTimer.current = window.setTimeout(() => setRejected(false), REJECT_FLASH_MS);
   };
+
+  const lastTilePlayed =
+    myTurn &&
+    !busy &&
+    view.rack.length > 0 &&
+    !rack.some(isTile) &&
+    analysis.invalid.size === 0 &&
+    (view.melded || analysis.meldValue >= INITIAL_MELD);
+  const autoFinished = useRef<Grid | null>(null);
+
+  useEffect(() => {
+    if (!lastTilePlayed || autoFinished.current === board) return;
+    const timer = window.setTimeout(() => {
+      autoFinished.current = board;
+      void finishTurn();
+    }, AUTO_FINISH_MS);
+    return () => window.clearTimeout(timer);
+  }, [lastTilePlayed, board]);
 
   const drawTile = async () => {
     setBusy(true);

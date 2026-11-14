@@ -14,12 +14,16 @@ const PHONE_PADDING = { portrait: 16, landscape: 12 };
 const RACK_ROWS = 2;
 const RACK_TILE = { portrait: 40, landscape: 28 };
 const PHONE_TILE = 40;
+const ZOOM = [36, 31, 27, 23, 20, 17, 14, 12, 10, 8];
+const CROWDED = 0.45;
+const ROOMY = 0.35;
 
 export interface TableUsage {
   firstCol: number;
   lastCol: number;
   firstRow: number;
   lastRow: number;
+  tiles: number;
   rackLast: number;
   rackLength: number;
 }
@@ -37,6 +41,7 @@ export interface TableLayout {
   rackCells: number;
   rackHeight: number | null;
   tiny: boolean;
+  zoom: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.floor(value)));
@@ -46,18 +51,29 @@ interface Span {
   size: number;
 }
 
-function widen({ start, size }: Span, target: number, total: number, keep?: number): Span {
-  const next = Math.min(total, Math.max(size, target));
-  const lowest = Math.max(0, start + size - next);
-  const highest = Math.min(start, total - next);
-  return { start: clamp(keep ?? start - (next - size) / 2, lowest, highest), size: next };
+const usedSpan = (first: number, last: number): Span | null => (last < 0 ? null : { start: first, size: last - first + 1 });
+
+function place(used: Span | null, size: number, total: number, keep?: number) {
+  const last = total - size;
+  if (!used) return clamp(keep ?? last / 2, 0, last);
+  const margin = Math.max(0, Math.min(1, Math.floor((size - used.size) / 2)));
+  const lowest = clamp(used.start + used.size + margin - size, 0, last);
+  const highest = Math.max(lowest, Math.min(last, used.start - margin));
+  return clamp(keep ?? (lowest + highest) / 2, lowest, highest);
 }
 
-function usedSpan(first: number, last: number, min: number, total: number, keep?: number): Span {
-  if (last < 0) return widen({ start: total / 2, size: 0 }, min, total, keep);
-  const start = Math.max(0, Math.floor((first - 1) / 2) * 2);
-  const end = Math.min(total, Math.ceil((last + 2) / 2) * 2);
-  return widen({ start, size: end - start }, min, total, keep);
+function zoomLevel(area: Size, padding: number, usedCols: number, usedRows: number, tiles: number, shown?: number) {
+  const count = (space: number, cell: number, total: number) => clamp((space - padding + GAP) / (cell + GAP), 1, total);
+  let level = { zoom: ZOOM[0], cols: 1, rows: 1 };
+  for (const zoom of ZOOM) {
+    const cols = count(area.width, zoom, BOARD_COLS);
+    const rows = count(area.height, zoom * TILE_RATIO, BOARD_ROWS);
+    level = { zoom, cols, rows };
+    const whole = cols === BOARD_COLS && rows === BOARD_ROWS;
+    const room = shown !== undefined && zoom > shown ? ROOMY : CROWDED;
+    if (whole || (cols >= usedCols && rows >= usedRows && tiles <= cols * rows * room)) break;
+  }
+  return level;
 }
 
 function fitTile(area: Size, cols: number, rows: number, padding: number, min: number, max = 52) {
@@ -102,30 +118,31 @@ function plan(screen: Screen, window: Size, area: Size, usage: TableUsage, shown
       rackCells: usage.rackLength,
       rackHeight: null,
       tiny: false,
+      zoom: 0,
     };
   }
 
   const portrait = screen === 'portrait';
-  const needCols = usedSpan(usage.firstCol, usage.lastCol, portrait ? 9 : 12, BOARD_COLS, shown?.col0);
-  const needRows = usedSpan(usage.firstRow, usage.lastRow, portrait ? 4 : 3, BOARD_ROWS, shown?.row0);
+  const usedCols = usedSpan(usage.firstCol, usage.lastCol);
+  const usedRows = usedSpan(usage.firstRow, usage.lastRow);
   const padding = PHONE_PADDING[screen];
-  const { tile, gap } = fitTile(area, needCols.size, needRows.size, padding, 8, PHONE_TILE);
-  const cols = widen(needCols, Math.floor((area.width - padding + gap) / (tile + gap)), BOARD_COLS, shown?.col0);
-  const rows = widen(needRows, Math.floor((area.height - padding + gap) / (tile * TILE_RATIO + gap)), BOARD_ROWS, shown?.row0);
+  const level = zoomLevel(area, padding, usedCols?.size ?? 0, usedRows?.size ?? 0, usage.tiles, shown?.zoom);
+  const { tile, gap } = fitTile(area, level.cols, level.rows, padding, 8, PHONE_TILE);
   const rack = packRack(area.width - RACK_PADDING, usage.rackLast + 2, portrait ? 9 : 12, RACK_TILE[screen]);
   return {
     screen,
     tile,
     gap,
     rackTile: rack.tile,
-    col0: cols.start,
-    row0: rows.start,
-    cols: cols.size,
-    rows: rows.size,
+    col0: place(usedCols, level.cols, BOARD_COLS, shown?.col0),
+    row0: place(usedRows, level.rows, BOARD_ROWS, shown?.row0),
+    cols: level.cols,
+    rows: level.rows,
     rackCols: rack.cols,
     rackCells: Math.min(usage.rackLength, rack.cols * rack.rows),
     rackHeight: rack.height,
     tiny: tile < TINY_TILE,
+    zoom: level.zoom,
   };
 }
 
@@ -156,11 +173,11 @@ export function useTableLayout(boardArea: RefObject<HTMLElement | null>, usage: 
     };
   }, [boardArea]);
 
-  const { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength } = usage;
+  const { firstCol, lastCol, firstRow, lastRow, tiles, rackLast, rackLength } = usage;
   return useMemo(() => {
     const screen = screenMode();
     const before = shown.current?.screen === screen ? shown.current : null;
-    shown.current = plan(screen, window_, area, { firstCol, lastCol, firstRow, lastRow, rackLast, rackLength }, before);
+    shown.current = plan(screen, window_, area, { firstCol, lastCol, firstRow, lastRow, tiles, rackLast, rackLength }, before);
     return shown.current;
-  }, [window_, area, firstCol, lastCol, firstRow, lastRow, rackLast, rackLength]);
+  }, [window_, area, firstCol, lastCol, firstRow, lastRow, tiles, rackLast, rackLength]);
 }
