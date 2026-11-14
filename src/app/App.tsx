@@ -4,6 +4,7 @@ import { useRoomSession } from '@/features/room-session';
 import { GamePage } from '@/pages/game';
 import { HomePage } from '@/pages/home';
 import { LobbyPage } from '@/pages/lobby';
+import { CodeStep, NameStep } from '@/pages/welcome';
 import { THEMES } from '@/shared/config/themes';
 import { audio } from '@/shared/lib/audio/engine';
 import { usePrefs } from '@/shared/lib/prefs';
@@ -30,6 +31,7 @@ export function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [step, setStep] = useState<'name' | 'code' | null>(null);
   const chatState = useRef({ you: '', hidden: false });
 
   const onChat = useCallback((message: ChatMessage) => {
@@ -41,6 +43,8 @@ export function App() {
   const room = useRoomSession({ name: prefs.name, avatar: prefs.avatar, notify: flash, onChat });
   const { view } = room;
   const inGame = view !== null && view.phase !== 'lobby';
+  const named = prefs.name.trim() !== '';
+  const entry = view ? null : !named || step === 'name' ? 'name' : (step ?? 'home');
   chatState.current = { you: view?.you ?? '', hidden: inGame && !chatOpen };
 
   useEffect(() => {
@@ -86,6 +90,7 @@ export function App() {
 
   const leave = async () => {
     await room.leave();
+    setStep(null);
     setChatOpen(false);
     setUnread(0);
   };
@@ -102,7 +107,37 @@ export function App() {
           confirmLeave={view?.phase === 'playing'}
           chat={inGame ? { open: chatOpen, unread, toggle: toggleChat } : undefined}
         />
-        {!view && <HomePage prefs={prefs} update={update} onCreate={room.create} onJoin={room.join} />}
+        {entry === 'name' && (
+          <NameStep
+            name={prefs.name}
+            avatar={prefs.avatar}
+            greet={!named}
+            onDone={(name) => {
+              update({ name });
+              setStep(null);
+            }}
+            onBack={named ? () => setStep(null) : undefined}
+          />
+        )}
+        {entry === 'code' && (
+          <CodeStep
+            onDone={(code) => {
+              setStep(null);
+              void room.join(code);
+            }}
+            onBack={() => setStep(null)}
+          />
+        )}
+        {entry === 'home' && (
+          <HomePage
+            prefs={prefs}
+            update={update}
+            onCreate={room.create}
+            onJoin={room.join}
+            onRename={() => setStep('name')}
+            onAskCode={() => setStep('code')}
+          />
+        )}
         {view?.phase === 'lobby' && <LobbyPage view={view} messages={room.messages} sendChat={room.sendChat} flash={flash} />}
         {inGame && <GamePage view={view} deadline={room.deadline} onLeave={leave} flash={flash} />}
       </div>

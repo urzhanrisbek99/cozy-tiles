@@ -95,6 +95,19 @@ html.sideways #root {
   transform: rotate(90deg);
 }
 
+html.sideways.flipped {
+  --safe-top: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-right, 0px);
+  --safe-left: env(safe-area-inset-bottom, 0px);
+}
+
+html.sideways.flipped #root {
+  top: 100dvh;
+  left: 0;
+  transform: rotate(-90deg);
+}
+
 /* compact player chips */
 
 #root {
@@ -162,25 +175,31 @@ html.phone-portrait {
     display: none;
   }
 
+  .pill {
+    padding: 3px;
+  }
+
   .pill button {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
+    font-size: 19px;
   }
 
   .leave {
-    height: 42px;
+    height: 48px;
+    padding: 0 14px;
   }
 
   .app {
-    padding: 58px 10px 10px;
+    padding: 64px 10px 10px;
   }
 
   .app.in-game {
-    padding: 104px 8px max(8px, var(--safe-bottom));
+    padding: 110px 8px max(8px, var(--safe-bottom));
   }
 
   .players {
-    top: 54px;
+    top: 60px;
     left: 8px;
     right: 8px;
     gap: 6px;
@@ -281,12 +300,18 @@ html.phone-portrait {
   }
 
   .reactions {
-    flex: 1 1 150px;
+    flex: 1 1 180px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    justify-items: stretch;
   }
 
   .emoji {
-    width: 28px;
-    height: 28px;
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    padding: 0;
+    border-radius: 12px;
+    font-size: 19px;
   }
 
   .actions .primary,
@@ -319,14 +344,22 @@ html.phone-portrait {
   }
 
   .chat-float {
-    top: 104px;
+    top: 110px;
     left: 8px;
     width: calc(100% - 16px);
-    height: min(420px, calc(100% - 116px));
+    height: min(420px, calc(100% - 122px));
   }
 
   .logo h1 {
     font-size: 34px;
+  }
+
+  .hello .logo h1 {
+    font-size: 26px;
+  }
+
+  .hi {
+    font-size: 16px;
   }
 
   .welcome h2 {
@@ -351,39 +384,53 @@ html.phone-landscape {
     gap: 6px;
   }
 
+  --ctl: 40px;
+  --ctl-rows: 2;
+
+  @media (max-height: 369px) {
+    --ctl: 33px;
+  }
+
+  @media (max-height: 319px) {
+    --ctl: 30px;
+    --ctl-rows: 1;
+  }
+
   &:has(.game) .controls {
     top: 4px;
     right: max(8px, var(--safe-right));
+    box-sizing: border-box;
     width: 196px;
-    height: 36px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0;
-    padding: 0 4px;
-    border-radius: 999px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 4px;
+    border-radius: 18px;
     background: var(--panel);
     border: 1px solid var(--panel-edge);
     box-shadow: 0 4px 14px rgba(60, 35, 55, 0.16);
   }
 
-  &:has(.game) .pill {
-    gap: 0;
-    padding: 0;
-    background: none;
-    border: 0;
-    box-shadow: none;
+  @media (max-height: 319px) {
+    &:has(.game) .controls {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
   }
 
-  &:has(.game) .pill button {
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
+  &:has(.game) .pill {
+    display: contents;
+  }
+
+  &:has(.game) .pill button,
+  &:has(.game) .leave {
+    width: 100%;
+    height: var(--ctl);
+    padding: 0;
+    border-radius: 13px;
+    font-size: 18px;
   }
 
   &:has(.game) .leave {
-    width: 34px;
-    height: 30px;
-    padding: 0;
     background: none;
     border: 0;
     box-shadow: none;
@@ -391,6 +438,11 @@ html.phone-landscape {
 
   &:has(.game) .leave.armed {
     background: #e25c73;
+  }
+
+  &:has(.game) .badge {
+    top: 1px;
+    right: 6px;
   }
 
   .pill.themes button:not(.on),
@@ -403,19 +455,24 @@ html.phone-landscape {
     display: none;
   }
 
+  .pill {
+    padding: 3px;
+  }
+
   .pill button {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
   }
 
   .leave {
     width: auto;
-    height: 40px;
-    padding: 0 12px;
+    height: 44px;
+    padding: 0 14px;
   }
 
   .app {
-    padding: 48px max(8px, var(--safe-right)) 8px max(8px, var(--safe-left));
+    padding: 54px max(8px, var(--safe-right)) 8px max(8px, var(--safe-left));
   }
 
   .app:not(.in-game) {
@@ -442,6 +499,42 @@ html.phone-landscape {
 
   .home > .logo {
     grid-area: 1 / 1 / span 4;
+  }
+
+  .hi {
+    padding: 3px 4px 3px 14px;
+    font-size: 15px;
+  }
+
+  .ask {
+    gap: 8px;
+  }
+
+  .ask h2 {
+    font-size: 19px;
+  }
+
+  .ask input {
+    padding: 8px 14px;
+  }
+
+  .ask .big {
+    padding: 9px 20px;
+    font-size: 16px;
+  }
+
+  .ask-cat {
+    display: none;
+  }
+
+  .hello {
+    gap: 14px;
+    padding-block: 18px;
+  }
+
+  .hello .logo h1 {
+    margin-top: 12px;
+    font-size: 26px;
   }
 
   .logo h1 {
@@ -491,7 +584,8 @@ html.phone-landscape {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     align-content: center;
-    gap: 8px 10px;
+    gap: 6px 10px;
+    padding-block: 9px;
     max-height: 100%;
     overflow: auto;
   }
@@ -638,8 +732,7 @@ html.phone-landscape {
     gap: 6px;
   }
 
-  .players,
-  .actions {
+  .players {
     margin-bottom: max(6px, var(--safe-bottom));
   }
 
@@ -680,7 +773,7 @@ html.phone-landscape {
   .status-line {
     grid-area: status;
     align-self: stretch;
-    margin-top: 42px;
+    margin-top: calc(var(--ctl-rows) * (var(--ctl) + 2px) + 14px);
     min-height: 0;
     max-height: 62px;
     overflow: hidden;
@@ -747,7 +840,9 @@ html.phone-landscape {
     align-self: end;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, auto);
     width: auto;
+    margin-bottom: 8px;
     padding: 8px;
     gap: 6px;
   }
@@ -757,7 +852,8 @@ html.phone-landscape {
   }
 
   .actions .small {
-    padding: 7px 2px;
+    grid-row: 1;
+    padding: 9px 2px;
     font-size: 13px;
     white-space: nowrap;
   }
@@ -767,22 +863,56 @@ html.phone-landscape {
     font-size: 16px;
   }
 
-  .actions .primary,
-  .actions .soft,
+  .actions .primary {
+    grid-area: 2 / 1 / auto / -1;
+  }
+
+  .actions .soft {
+    grid-area: 3 / 1 / auto / -1;
+  }
+
   .reactions {
-    grid-column: 1 / -1;
+    grid-area: 4 / 1 / auto / -1;
+    min-width: 0;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    justify-items: stretch;
   }
 
   .actions .primary,
   .actions .soft {
-    padding: 9px 6px;
-    font-size: 14px;
+    padding: 11px 6px;
+    font-size: 15px;
   }
 
   .emoji {
-    width: 24px;
-    height: 24px;
-    font-size: 15px;
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    padding: 0;
+    border-radius: 12px;
+    font-size: 19px;
+  }
+
+  @media (max-height: 369px) {
+    .actions {
+      margin-bottom: 6px;
+      gap: 5px;
+    }
+
+    .actions .small {
+      padding: 6px 2px;
+    }
+
+    .actions .primary,
+    .actions .soft {
+      padding: 8px 6px;
+      font-size: 14px;
+    }
+
+    .emoji {
+      height: 28px;
+      font-size: 16px;
+    }
   }
 
   .chat-float {

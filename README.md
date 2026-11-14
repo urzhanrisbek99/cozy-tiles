@@ -39,8 +39,8 @@ core/      правила игры и типы, общие для сервера
 server/    комнаты, ходы, таймер, чат; сервер проверяет каждый ход
 src/       клиент, слои по Feature-Sliced Design
   app/       точка входа, переключение экранов, глобальные стили
-  pages/     home, lobby, game
-  widgets/   scene, controls, chat, players-bar, turn-actions, game-result, rules-dialog
+  pages/     welcome, home, lobby, game
+  widgets/   scene, logo, controls, chat, players-bar, turn-actions, game-result, rules-dialog
   features/  arrange-tiles, drag-tiles, animate-tiles, turn-timer, room-session
   entities/  tile, player
   shared/    api (сокет), lib (звук, настройки), config, ui

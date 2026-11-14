@@ -70,7 +70,8 @@ function fitTile(area: Size, cols: number, rows: number, padding: number, min: n
   return tile < TINY_TILE ? { tile: fit(TIGHT_GAP), gap: TIGHT_GAP } : { tile, gap: GAP };
 }
 
-function packRack(width: number, cells: number, firstCols: number, largest: number) {
+function packRack(width: number, cells: number, fewest: number, largest: number) {
+  const firstCols = Math.max(fewest, Math.floor((width + GAP) / (largest + GAP)));
   const fit = (cols: number, rows: number, height: number) =>
     Math.min((width - GAP * (cols - 1)) / cols, (height - GAP * (rows - 1)) / rows / TILE_RATIO);
   const base = clamp(fit(firstCols, 1, Infinity), 20, largest);

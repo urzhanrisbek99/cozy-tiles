@@ -1,40 +1,35 @@
 import { useState } from 'react';
 import { CAT_COATS, CatFace } from '@/entities/player';
-import { Glyph } from '@/entities/tile';
 import type { Prefs } from '@/shared/lib/prefs';
+import { isSideways } from '@/shared/lib/viewport';
+import { Logo } from '@/widgets/logo';
 
-export function HomePage({
-  prefs,
-  update,
-  onCreate,
-  onJoin,
-}: {
+interface Props {
   prefs: Prefs;
   update: (p: Partial<Prefs>) => void;
   onCreate: () => void;
   onJoin: (code: string) => void;
-}) {
+  onRename: () => void;
+  onAskCode: () => void;
+}
+
+export function HomePage({ prefs, update, onCreate, onJoin, onRename, onAskCode }: Props) {
   const [code, setCode] = useState(() => new URLSearchParams(window.location.search).get('room')?.toUpperCase() ?? '');
   const invited = code.length === 4;
   return (
     <main className="card home">
-      <div className="logo">
-        <div className="logo-tiles" aria-hidden>
-          {[0, 1, 2, 3].map((c) => (
-            <span key={c} className={`logo-tile c${c}`}>
-              {7}
-              <Glyph color={c} />
-            </span>
-          ))}
-        </div>
-        <h1>Cozy Tiles</h1>
+      <Logo>
         <p className="muted">уютные плитки с друзьями · 2–5 игроков</p>
-      </div>
+      </Logo>
 
-      <label className="field">
-        <span>Как тебя зовут?</span>
-        <input value={prefs.name} maxLength={16} placeholder="Например, Мурка" onChange={(e) => update({ name: e.target.value })} />
-      </label>
+      <div className="hi">
+        <span>
+          Привет, <b>{prefs.name}</b>!
+        </span>
+        <button className="ghost small" onClick={onRename}>
+          ✎ Изменить имя
+        </button>
+      </div>
 
       <div className="field">
         <span>Твой котик</span>
@@ -70,6 +65,11 @@ export function HomePage({
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
+          onPointerDown={(e) => {
+            if (!isSideways()) return;
+            e.preventDefault();
+            onAskCode();
+          }}
           placeholder="КОД"
           aria-label="Код комнаты"
           className="code-input"
