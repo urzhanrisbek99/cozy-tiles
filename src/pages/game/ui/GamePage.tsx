@@ -349,7 +349,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
         <div className={`rack ${myTurn ? 'active' : ''}`} onPointerDown={drag.onPointerDown}>
           {rack.slice(0, layout.rackCells).map((id, i) => (
             <Cell
-              key={i}
+              key={id === null ? `gap-${i}` : `tile-${id}`}
               zone="rack"
               r={Math.floor(i / RACK_COLS)}
               c={i % RACK_COLS}
