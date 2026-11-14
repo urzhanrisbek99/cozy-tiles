@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 const PHONE_WIDTH = 520;
 const SHORT_HEIGHT = 500;
 const SIDEWAYS_WIDTH = 600;
+const TILT = 6;
 
 export type Screen = 'desktop' | 'portrait' | 'landscape';
 
@@ -23,7 +24,6 @@ export interface Box extends Size {
   bottom: number;
 }
 
-let uprightHolds = 0;
 let flipped = false;
 const watchers = new Set<() => void>();
 
@@ -31,8 +31,7 @@ const installed = () =>
   window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
-export const isSideways = () =>
-  uprightHolds === 0 && installed() && window.innerHeight > window.innerWidth && window.innerWidth <= SIDEWAYS_WIDTH;
+export const isSideways = () => installed() && window.innerHeight > window.innerWidth && window.innerWidth <= SIDEWAYS_WIDTH;
 
 function landscapeTurn() {
   const legacy = (window as Window & { orientation?: number }).orientation;
@@ -96,13 +95,30 @@ function watch(notify: () => void) {
 
 export const useSideways = () => useSyncExternalStore(watch, isSideways);
 
-export function holdUpright() {
-  uprightHolds += 1;
-  sync();
-  return () => {
-    uprightHolds -= 1;
-    sync();
+function onMotion(event: DeviceMotionEvent) {
+  const pull = event.accelerationIncludingGravity;
+  if (!pull || pull.x === null || pull.y === null || landscapeTurn() !== 0) return;
+  if (Math.abs(pull.x) < TILT || Math.abs(pull.x) < Math.abs(pull.y)) return;
+  const next = pull.x > 0;
+  if (next === flipped) return;
+  flipped = next;
+  if (isSideways()) window.dispatchEvent(new Event('resize'));
+}
+
+function followTilt() {
+  if (!installed() || typeof DeviceMotionEvent === 'undefined') return;
+  const listen = () => window.addEventListener('devicemotion', onMotion);
+  const ask = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
+  if (typeof ask !== 'function') {
+    listen();
+    return;
+  }
+  const onTap = () => {
+    if (!isSideways()) return;
+    window.removeEventListener('click', onTap);
+    ask.call(DeviceMotionEvent).then((answer) => answer === 'granted' && listen(), () => undefined);
   };
+  window.addEventListener('click', onTap);
 }
 
 export function watchScreen() {
@@ -110,4 +126,5 @@ export function watchScreen() {
   window.addEventListener('resize', sync);
   window.addEventListener('orientationchange', sync);
   window.visualViewport?.addEventListener('resize', sync);
+  followTilt();
 }

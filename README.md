@@ -20,7 +20,7 @@ npm start          # http://localhost:3001, порт задаётся через
 ## Проверки
 
 ```bash
-npm test           # правила, ход по таймеру, расстановка плиток на столе и в руке
+npm test           # правила, ход по таймеру, расстановка плиток на столе и в руке, масштаб стола на телефоне
 npm run typecheck
 ```
 
@@ -40,7 +40,7 @@ server/    комнаты, ходы, таймер, чат; сервер пров
 src/       клиент, слои по Feature-Sliced Design
   app/       точка входа, переключение экранов, глобальные стили
   pages/     welcome, home, lobby, game
-  widgets/   scene, logo, controls, chat, players-bar, turn-actions, game-result, rules-dialog
+  widgets/   scene, logo, keyboard, controls, chat, players-bar, turn-actions, game-result, rules-dialog
   features/  arrange-tiles, drag-tiles, animate-tiles, turn-timer, room-session
   entities/  tile, player
   shared/    api (сокет), lib (звук, настройки), config, ui

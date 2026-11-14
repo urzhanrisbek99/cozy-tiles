@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CatFace } from '@/entities/player';
-import { holdUpright } from '@/shared/lib/viewport';
+import { useSideways } from '@/shared/lib/viewport';
 import { Logo } from '@/widgets/logo';
 
 const HELLO_MS = 2400;
@@ -16,7 +16,7 @@ interface Props {
 export function NameStep({ name, avatar, greet, onDone, onBack }: Props) {
   const [greeting, setGreeting] = useState(greet);
   const [draft, setDraft] = useState(name);
-  useEffect(holdUpright, []);
+  const sideways = useSideways();
 
   useEffect(() => {
     if (!greeting) return;
@@ -59,6 +59,7 @@ export function NameStep({ name, avatar, greet, onDone, onBack }: Props) {
         aria-label="Имя"
         autoComplete="off"
         autoCapitalize="words"
+        inputMode={sideways ? 'none' : undefined}
         enterKeyHint="done"
         onChange={(e) => setDraft(e.target.value)}
       />

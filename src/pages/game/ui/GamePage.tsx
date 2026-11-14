@@ -75,25 +75,21 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
   boardRef.current = board;
   rackRef.current = rack;
 
-  const usage = useMemo(() => {
-    let firstCol = BOARD_COLS;
-    let lastCol = -1;
-    let firstRow = board.length;
-    let lastRow = -1;
-    let onTable = 0;
-    board.forEach((row, r) =>
-      row.forEach((v, c) => {
-        if (v === null) return;
-        onTable += 1;
-        firstCol = Math.min(firstCol, c);
-        lastCol = Math.max(lastCol, c);
-        firstRow = Math.min(firstRow, r);
-        lastRow = Math.max(lastRow, r);
-      }),
-    );
-    return { firstCol, lastCol, firstRow, lastRow, tiles: onTable, rackLast: rack.findLastIndex(isTile), rackLength: rack.length };
-  }, [board, rack]);
-  const layout = useTableLayout(boardAreaRef, usage);
+  const layout = useTableLayout(boardAreaRef, board, rack.findLastIndex(isTile), rack.length);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const keepCalm = (e: Event) => {
+      if (e.target instanceof Element && e.target.closest('.board, .rack')) e.preventDefault();
+    };
+    root.addEventListener('touchstart', keepCalm, { passive: false });
+    root.addEventListener('contextmenu', keepCalm);
+    return () => {
+      root.removeEventListener('touchstart', keepCalm);
+      root.removeEventListener('contextmenu', keepCalm);
+    };
+  }, []);
 
   const sendDraft = useCallback(() => {
     if (draftTimer.current !== null) return;
@@ -309,7 +305,7 @@ export function GamePage({ view, deadline, onLeave, flash }: Props) {
   const turnPlayer = view.players.find((p) => p.id === view.turnPlayerId);
 
   return (
-    <div className={`game ${layout.tiny ? 'tiny' : ''}`} style={style} ref={rootRef}>
+    <div className="game" style={style} ref={rootRef}>
       <PlayersBar view={view} deadline={deadline} placedThisTurn={analysis.placed} poolRef={poolRef} />
 
       <div className={`status-line ${myTurn ? 'mine' : ''}`} aria-live="polite">

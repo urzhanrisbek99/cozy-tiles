@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { holdUpright } from '@/shared/lib/viewport';
+import { useState } from 'react';
+import { useSideways } from '@/shared/lib/viewport';
 
 export function CodeStep({ onDone, onBack }: { onDone: (code: string) => void; onBack: () => void }) {
   const [code, setCode] = useState('');
-  useEffect(holdUpright, []);
+  const sideways = useSideways();
   const ready = code.length === 4;
   return (
     <form
@@ -23,6 +23,8 @@ export function CodeStep({ onDone, onBack }: { onDone: (code: string) => void; o
         aria-label="Код комнаты"
         autoComplete="off"
         autoCapitalize="characters"
+        inputMode={sideways ? 'none' : undefined}
+        data-keys="en"
         enterKeyHint="go"
         className="code-input"
       />

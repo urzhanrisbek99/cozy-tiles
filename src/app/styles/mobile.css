@@ -54,15 +54,9 @@
   cursor: grabbing;
 }
 
-/* zoomed-out board */
-
-.game.tiny .board .tile .glyph {
-  display: none;
-}
-
-.game.tiny .board .tile .num {
-  font-size: calc(var(--cw) * 0.76);
-  letter-spacing: -0.8px;
+.game,
+.game * {
+  -webkit-touch-callout: none;
 }
 
 .status-line:empty {
@@ -108,15 +102,106 @@ html.sideways.flipped #root {
   transform: rotate(-90deg);
 }
 
-.chat.composing {
+/* own keyboard for the sideways page, where the system one would come up turned */
+
+.keys {
+  --key-h: 34px;
   position: fixed;
-  z-index: 60;
-  top: max(8px, var(--safe-top));
-  left: 8px;
-  right: 8px;
-  width: auto;
-  height: min(300px, 40%);
-  min-height: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px max(8px, var(--safe-right)) max(7px, var(--safe-bottom)) max(8px, var(--safe-left));
+  background: color-mix(in srgb, var(--panel) 92%, #000);
+  border-top: 1px solid var(--panel-edge);
+  box-shadow: 0 -6px 18px rgba(60, 35, 55, 0.18);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  animation: keys-in 0.18s ease;
+}
+
+.keys-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.key {
+  flex: 1 1 0;
+  max-width: 64px;
+  height: var(--key-h);
+  padding: 0;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 0 rgba(60, 35, 55, 0.18);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.key:active {
+  background: var(--soft);
+  transform: translateY(1px);
+}
+
+.key.wide {
+  flex: 1.6 1 0;
+  max-width: 96px;
+  background: color-mix(in srgb, var(--soft) 70%, #fff);
+  font-size: 14px;
+}
+
+.key.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.key.space {
+  flex: 6 1 0;
+  max-width: none;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.key.enter {
+  flex: 2 1 0;
+  max-width: 120px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  color: #fff;
+  font-size: 14px;
+}
+
+@keyframes keys-in {
+  from {
+    transform: translateY(40%);
+    opacity: 0;
+  }
+}
+
+html.sideways.keys-open {
+  --keys-h: calc(4 * 34px + 3 * 5px + 14px + var(--safe-bottom));
+
+  .app:not(.in-game) {
+    padding-top: 8px;
+    padding-bottom: calc(var(--keys-h) + 6px);
+  }
+
+  &:not(:has(.game)) .controls,
+  .ask .muted,
+  .ask .ghost,
+  .ask-cat,
+  .welcome,
+  .chat-quick {
+    display: none;
+  }
+
+  .chat-float {
+    top: 4px !important;
+    height: calc(100% - var(--keys-h) - 8px);
+  }
 }
 
 /* compact player chips */

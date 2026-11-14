@@ -9,6 +9,7 @@ import { THEMES } from '@/shared/config/themes';
 import { audio } from '@/shared/lib/audio/engine';
 import { usePrefs } from '@/shared/lib/prefs';
 import { FloatingChat } from '@/widgets/chat';
+import { Keyboard } from '@/widgets/keyboard';
 import { Controls } from '@/widgets/controls';
 import { RulesDialog } from '@/widgets/rules-dialog';
 import { Scene } from '@/widgets/scene';
@@ -150,6 +151,7 @@ export function App() {
         </div>
       )}
       {rulesOpen && <RulesDialog onClose={() => setRulesOpen(false)} />}
+      <Keyboard />
     </>
   );
 }
